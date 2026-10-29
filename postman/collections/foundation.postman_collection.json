@@ -1,0 +1,148 @@
+{
+  "info": {
+    "name": "Cabeça do Cachorro fundação local",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Contrato contracts/storefront.openapi.json. Executar com DATABASE_ENABLED=false e sem MUIRASOFT_*; readiness deve responder 503 nesse ambiente deliberadamente incompleto. Não contém credenciais e não cria recursos."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Liveness do processo",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "client-supplied-id"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/health/live"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Resposta JSON\", () => pm.response.to.be.json);",
+              "pm.test(\"Request ID gerado pelo servidor\", () => {",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).not.to.eql(\"client-supplied-id\");",
+              "});",
+              "pm.test(\"Sem campos de contexto ou credenciais\", () => {",
+              "  const forbidden = [\"empresa\", \"canal\", \"escopos\", \"token\", \"authorization\", \"secret\", \"password\", \"baseUrl\"];",
+              "  function inspect(value) {",
+              "    if (!value || typeof value !== \"object\") return;",
+              "    Object.entries(value).forEach(([key, nested]) => { pm.expect(forbidden).not.to.include(key); inspect(nested); });",
+              "  }",
+              "  inspect(pm.response.json());",
+              "});",
+              "pm.test(\"Liveness HTTP 200\", () => pm.response.to.have.status(200));",
+              "pm.test(\"Contrato de liveness\", () => pm.expect(pm.response.json()).to.eql({status:\"ok\"}));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Readiness sem dependências configuradas",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "client-supplied-id"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/health/ready"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Resposta JSON\", () => pm.response.to.be.json);",
+              "pm.test(\"Request ID gerado pelo servidor\", () => {",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).not.to.eql(\"client-supplied-id\");",
+              "});",
+              "pm.test(\"Sem campos de contexto ou credenciais\", () => {",
+              "  const forbidden = [\"empresa\", \"canal\", \"escopos\", \"token\", \"authorization\", \"secret\", \"password\", \"baseUrl\"];",
+              "  function inspect(value) {",
+              "    if (!value || typeof value !== \"object\") return;",
+              "    Object.entries(value).forEach(([key, nested]) => { pm.expect(forbidden).not.to.include(key); inspect(nested); });",
+              "  }",
+              "  inspect(pm.response.json());",
+              "});",
+              "pm.test(\"Readiness HTTP 503 no desenvolvimento incompleto\", () => pm.response.to.have.status(503));",
+              "pm.test(\"Contrato de readiness\", () => pm.expect(pm.response.json()).to.eql({status:\"not_ready\",checks:{database:\"disabled\",muirasoft:\"not_configured\"}}));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Endpoint desconhecido",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "X-Request-Id",
+            "value": "client-supplied-id"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/unknown-foundation-route"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Resposta JSON\", () => pm.response.to.be.json);",
+              "pm.test(\"Request ID gerado pelo servidor\", () => {",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);",
+              "  pm.expect(pm.response.headers.get(\"X-Request-Id\")).not.to.eql(\"client-supplied-id\");",
+              "});",
+              "pm.test(\"Sem campos de contexto ou credenciais\", () => {",
+              "  const forbidden = [\"empresa\", \"canal\", \"escopos\", \"token\", \"authorization\", \"secret\", \"password\", \"baseUrl\"];",
+              "  function inspect(value) {",
+              "    if (!value || typeof value !== \"object\") return;",
+              "    Object.entries(value).forEach(([key, nested]) => { pm.expect(forbidden).not.to.include(key); inspect(nested); });",
+              "  }",
+              "  inspect(pm.response.json());",
+              "});",
+              "pm.test(\"Endpoint desconhecido HTTP 404\", () => pm.response.to.have.status(404));",
+              "pm.test(\"Erro normalizado\", () => {",
+              "  const body=pm.response.json();",
+              "  pm.expect(Object.keys(body).sort()).to.eql([\"code\",\"message\",\"request_id\"]);",
+              "  pm.expect(body.code).to.eql(\"NOT_FOUND\");",
+              "  pm.expect(body.message).to.eql(\"Recurso não encontrado.\");",
+              "  pm.expect(body.request_id).to.eql(pm.response.headers.get(\"X-Request-Id\"));",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

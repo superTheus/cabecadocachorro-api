@@ -1,0 +1,240 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Cabeça do Cachorro API da Loja",
+    "version": "0.1.0",
+    "description": "Contrato público implementado na etapa 1: somente saúde. Autenticação de compradores, catálogo, checkout e pedidos públicos serão definidos nas etapas próprias; métodos internos do adaptador MuiraSoft não são rotas públicas."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Desenvolvimento local. Configure host e porta do ambiente."
+    }
+  ],
+  "tags": [
+    {
+      "name": "Saúde",
+      "description": "Sondas sem dados comerciais, credenciais ou conteúdo de respostas do MuiraSoft."
+    }
+  ],
+  "paths": {
+    "/api/v1/health/live": {
+      "get": {
+        "operationId": "checkLiveness",
+        "tags": [
+          "Saúde"
+        ],
+        "summary": "Verificar se o processo HTTP está respondendo",
+        "description": "Não consulta banco ou MuiraSoft e não indica prontidão comercial.",
+        "responses": {
+          "200": {
+            "description": "Processo respondendo.",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador UUID gerado pelo servidor para esta requisição.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Liveness"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/health/ready": {
+      "get": {
+        "operationId": "checkReadiness",
+        "tags": [
+          "Saúde"
+        ],
+        "summary": "Verificar banco e integração configurados",
+        "description": "Somente retorna 200 quando banco e conexão MuiraSoft estiverem disponíveis e o contexto autenticado corresponder à empresa e ao canal configurados. Banco desabilitado explicitamente no desenvolvimento resulta em 503. A resposta pública não identifica o lojista nem a causa interna da falha.",
+        "responses": {
+          "200": {
+            "description": "Dependências prontas.",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador UUID gerado pelo servidor para esta requisição.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                },
+                "example": {
+                  "status": "ready",
+                  "checks": {
+                    "database": "up",
+                    "muirasoft": "up"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Pelo menos uma dependência indisponível ou não configurada.",
+            "headers": {
+              "X-Request-Id": {
+                "description": "Identificador UUID gerado pelo servidor para esta requisição.",
+                "schema": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotReady"
+                },
+                "example": {
+                  "status": "not_ready",
+                  "checks": {
+                    "database": "disabled",
+                    "muirasoft": "not_configured"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Liveness": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok"
+            ]
+          }
+        }
+      },
+      "Readiness": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "checks"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ready"
+            ]
+          },
+          "checks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "database",
+              "muirasoft"
+            ],
+            "properties": {
+              "database": {
+                "type": "string",
+                "enum": [
+                  "up"
+                ]
+              },
+              "muirasoft": {
+                "type": "string",
+                "enum": [
+                  "up"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "NotReady": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "checks"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "not_ready"
+            ]
+          },
+          "checks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "database",
+              "muirasoft"
+            ],
+            "properties": {
+              "database": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down",
+                  "disabled"
+                ]
+              },
+              "muirasoft": {
+                "type": "string",
+                "enum": [
+                  "up",
+                  "down",
+                  "not_configured"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      }
+    }
+  }
+}

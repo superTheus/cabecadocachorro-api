@@ -1,0 +1,43 @@
+name: API foundation
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: foundation_test_only
+          MYSQL_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pfoundation_test_only"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      NODE_ENV: test
+      DATABASE_TEST_ADMIN_URL: mysql://root:foundation_test_only@127.0.0.1:3306/
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm install --global postman-cli@1.69.0
+      - run: npm run build
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run test:contracts
+      - run: node test/integration/muirasoft-http.mjs
+      - run: node scripts/test-http-collection.mjs
+      - run: node test/database/foundation.mjs

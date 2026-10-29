@@ -1,0 +1,100 @@
+purpose:
+  stands_in_for: >-
+    Integração HTTP MuiraSoft v1, modelada a partir do snapshot proprietário
+    contracts/muirasoft/integracoes-v1.openapi.json, somente nos caminhos usados
+    pelo harness de fundação. Controles locais injetam falhas de transporte.
+  unblocks: >-
+    Verificar MuiraSoftClient compilado por HTTP real sem credenciais, banco,
+    dados pessoais ou chamadas ao MuiraSoft real. CLI 1.69.0 executa mock run;
+    não foi executado o comando novo postman simulation.
+assumptions:
+  - id: binding-before-commercial-read
+    status: supported
+    claim: >-
+      Nos cenários locais exercitados, o cliente consulta /integracao/v1/conexao
+      e impede a leitura de catálogo quando empresa ou canal divergem do vínculo.
+    reason: >-
+      As respostas divergentes causaram MUIRASOFT_CONTEXT_MISMATCH e o estado do
+      servidor registrou somente a chamada de contexto, sem a leitura comercial.
+    verification: >-
+      Em 2026-10-29, test/integration/muirasoft-http.mjs passou nos dois cenários
+      de divergência e no contexto válido com bearer sintético. O NDJSON Postman
+      confirmou tráfego de contexto. Não foi consultada uma instalação real.
+    source: >-
+      src/integrations/muirasoft/muirasoft.client.ts;
+      test/integration/muirasoft-http.mjs;
+      contracts/muirasoft/integracoes-v1.openapi.json
+    updated_at: "2026-10-29"
+  - id: transport-failure-bounds
+    status: supported
+    claim: >-
+      Nos cenários locais de 401, 429, HTML 500, JSON inválido e timeout, o cliente
+      devolve erros seguros e limita o tempo de espera; 429 conserva metadados
+      sanitizados de Retry-After e request ID.
+    reason: >-
+      As verificações observaram os códigos/status esperados, ausência do detalhe
+      privado na mensagem e nenhuma repetição automática nas chamadas verificadas.
+    verification: >-
+      Em 2026-10-29, o harness passou com resposta atrasada de 600 ms e timeout
+      configurado de 150 ms, além dos erros HTTP e de conteúdo. O alvo foi mock
+      HTTP local, e não o backend real.
+    source: >-
+      postman/mocks/muirasoft/default.js;
+      test/integration/muirasoft-http.mjs;
+      src/integrations/muirasoft/muirasoft.error.ts
+    updated_at: "2026-10-29"
+  - id: redirect-does-not-forward-credential
+    status: supported
+    claim: >-
+      No cenário local 302, o cliente recusa o redirecionamento e não envia a
+      requisição nem sua credencial ao servidor de destino.
+    reason: >-
+      Um segundo servidor HTTP em loopback permaneceu sem chamadas e o cliente
+      retornou MUIRASOFT_UNAVAILABLE.
+    verification: >-
+      Em 2026-10-29, o harness criou destino independente, recebeu 302 do mock e
+      verificou zero requisições no destino antes de encerrar os dois servidores.
+    source: >-
+      src/integrations/muirasoft/muirasoft.client.ts;
+      test/integration/muirasoft-http.mjs
+    updated_at: "2026-10-29"
+  - id: ambiguous-post-does-not-retry
+    status: supported
+    claim: >-
+      No cenário local em que o mock guarda um pedido e atrasa a resposta, o
+      cliente não repete automaticamente o POST após o timeout.
+    reason: >-
+      O cliente retornou MUIRASOFT_TIMEOUT; o estado do mock mostrou exatamente
+      uma escrita e um pedido. Isso demonstra comportamento do chamador,
+      sem concluir que timeout no serviço real significa rollback.
+    verification: >-
+      Em 2026-10-29, o cenário write-timeout passou. A execução também verificou
+      payload JSON e Idempotency-Key transmitidos e um replay intencional com
+      resultado idêntico no mock. Foram 13 cenários locais aprovados ao todo.
+    source: >-
+      postman/mocks/muirasoft/default.js;
+      test/integration/muirasoft-http.mjs
+    updated_at: "2026-10-29"
+  - id: real-installation-ready
+    status: unknown
+    claim: >-
+      A instalação de destino tem credencial ativa, escopos suficientes,
+      empresa/canal corretos e cumpre o contrato snapshot em operação real.
+    reason: >-
+      Não foram fornecidas nem usadas credenciais reais; o mock e seu replay
+      não estabelecem prontidão de uma instalação.
+    verification: >-
+      Contrato proprietário lido e snapshot/checksum conferidos em 2026-10-29.
+      A conectividade real ainda depende do diagnóstico integration:check no
+      ambiente configurado, sem publicar dados de contexto por HTTP público.
+    source: >-
+      contracts/muirasoft/provenance.json;
+      docs/integracao-muirasoft.md
+    updated_at: "2026-10-29"
+fingerprints:
+  - id: foundation-uncommitted-2026-10-29
+    date: "2026-10-29"
+    commit: null
+    cli: >-
+      Postman CLI 1.69.0; node 24.19.0; checkout sem commit inicial e com arquivos
+      em desenvolvimento. Validação usa dist gerado por build, sem .env.

@@ -1,0 +1,1686 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MuiraSoft Integração de Lojas",
+    "version": "1.0.0",
+    "description": "API de servidor para lojas externas. Credenciais são gerenciadas em Configurações → Integrações. Estoque sem reserva; operações não criam recebimentos nem cancelam notas fiscais. Retry mantém o status e corpo originais; chave com outro conteúdo retorna 409."
+  },
+  "servers": [
+    {
+      "url": "https://api.example.com/integracao/v1",
+      "description": "Substitua pela URL base da sua instalação"
+    }
+  ],
+  "security": [
+    {
+      "integrationToken": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "integrationToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "muira_live_<id>.<segredo>"
+      }
+    },
+    "schemas": {
+      "Status": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "FLUXO",
+              "ESPECIAL",
+              "CANCELAMENTO"
+            ]
+          },
+          "stage": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "codigo",
+          "nome",
+          "tipo",
+          "stage"
+        ]
+      },
+      "ItemEntrada": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id_produto": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quantidade": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,4})?$",
+            "example": "2.0000"
+          },
+          "preco": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "desconto_real": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "desconto_percentual": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "acrescimo": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          }
+        },
+        "required": [
+          "id_produto",
+          "quantidade",
+          "preco"
+        ]
+      },
+      "Cliente": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referencia_externa": {
+            "type": "string",
+            "maxLength": 191
+          },
+          "nome": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "email": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "documento": {
+            "type": "string",
+            "maxLength": 18
+          },
+          "telefone": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "cep": {
+            "type": "string",
+            "maxLength": 9
+          },
+          "logradouro": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "numero": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "bairro": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "complemento": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "cidade": {
+            "type": "string",
+            "maxLength": 50
+          },
+          "estado": {
+            "type": "string",
+            "maxLength": 2
+          },
+          "codigo_municipio": {
+            "type": "string",
+            "maxLength": 7
+          },
+          "inscricao_estadual": {
+            "type": "string",
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "referencia_externa",
+          "nome"
+        ]
+      },
+      "Pagamento": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id_forma": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "id_condicao_pagamento": {
+            "type": "integer",
+            "minimum": 1,
+            "nullable": true
+          },
+          "valor": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "parcelas": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "primeiro_vencimento": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id_forma",
+          "valor"
+        ]
+      },
+      "CriarPedido": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "referencia_externa": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 191
+          },
+          "cliente": {
+            "type": "object",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Cliente"
+              }
+            ]
+          },
+          "itens": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 500,
+            "items": {
+              "$ref": "#/components/schemas/ItemEntrada"
+            }
+          },
+          "pagamentos": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/Pagamento"
+            }
+          },
+          "observacao": {
+            "type": "string",
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "referencia_externa",
+          "itens"
+        ]
+      },
+      "Pedido": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "numero": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "referencia_externa": {
+            "type": "string"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "LOJA_VIRTUAL",
+              "MARKETPLACE",
+              "API",
+              "INTEGRACAO"
+            ]
+          },
+          "canal": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "total_desconto": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "total_acrescimo": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelado_em": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "estoque_politica": {
+            "type": "string",
+            "enum": [
+              "SEM_MOVIMENTO"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "referencia_externa",
+          "status",
+          "total",
+          "versao"
+        ]
+      },
+      "PedidoDetalhe": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "numero": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "referencia_externa": {
+            "type": "string"
+          },
+          "origem": {
+            "type": "string",
+            "enum": [
+              "LOJA_VIRTUAL",
+              "MARKETPLACE",
+              "API",
+              "INTEGRACAO"
+            ]
+          },
+          "canal": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/Status"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "total_desconto": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "total_acrescimo": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "versao": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "criado_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "atualizado_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelado_em": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "estoque_politica": {
+            "type": "string",
+            "enum": [
+              "SEM_MOVIMENTO"
+            ]
+          },
+          "cliente": {
+            "type": "object",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Cliente"
+              }
+            ]
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItemSaida"
+            }
+          },
+          "fluxo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Status"
+            }
+          },
+          "historico": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "anterior": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "codigo": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "tipo": {
+                      "type": "string",
+                      "enum": [
+                        "FLUXO",
+                        "ESPECIAL",
+                        "CANCELAMENTO"
+                      ]
+                    },
+                    "stage": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "codigo",
+                    "nome",
+                    "tipo",
+                    "stage"
+                  ],
+                  "nullable": true
+                },
+                "novo": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "codigo": {
+                      "type": "string"
+                    },
+                    "nome": {
+                      "type": "string"
+                    },
+                    "tipo": {
+                      "type": "string",
+                      "enum": [
+                        "FLUXO",
+                        "ESPECIAL",
+                        "CANCELAMENTO"
+                      ]
+                    },
+                    "stage": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "codigo",
+                    "nome",
+                    "tipo",
+                    "stage"
+                  ]
+                },
+                "data": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "observacao": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Apenas observações explicitamente compartilháveis."
+                }
+              },
+              "required": [
+                "anterior",
+                "novo",
+                "data",
+                "observacao"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "numero",
+          "referencia_externa",
+          "status",
+          "total",
+          "versao",
+          "cliente",
+          "itens",
+          "fluxo",
+          "historico"
+        ]
+      },
+      "Produto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "unidade": {
+            "type": "string",
+            "nullable": true
+          },
+          "ean": {
+            "type": "string",
+            "nullable": true
+          },
+          "controla_estoque": {
+            "type": "boolean"
+          },
+          "kit": {
+            "type": "boolean"
+          },
+          "preco_venda": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00",
+            "nullable": true
+          },
+          "estoque": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "cadastrado": {
+                "type": "boolean"
+              },
+              "fisico": {
+                "type": "string",
+                "nullable": true
+              },
+              "politica": {
+                "type": "string",
+                "enum": [
+                  "SEM_MOVIMENTO"
+                ]
+              },
+              "reservado": {
+                "type": "string",
+                "nullable": true,
+                "description": "Sempre null nesta versão; não há reserva."
+              },
+              "disponivel_para_venda": {
+                "type": "string",
+                "nullable": true,
+                "description": "Sempre null nesta versão; saldo físico não é promessa de atendimento."
+              },
+              "consultado_em": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "versao": {
+                "type": "integer",
+                "nullable": true
+              }
+            },
+            "required": [
+              "cadastrado",
+              "fisico",
+              "politica",
+              "reservado",
+              "disponivel_para_venda",
+              "consultado_em"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "descricao",
+          "estoque"
+        ]
+      },
+      "Erro": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "request_id"
+        ]
+      },
+      "ItemSaida": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id_produto": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quantidade": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,4})?$",
+            "example": "2.0000"
+          },
+          "preco": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "desconto_real": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "acrescimo": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
+            "example": "50.00"
+          }
+        },
+        "required": [
+          "id_produto",
+          "quantidade",
+          "preco"
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/conexao": {
+      "get": {
+        "summary": "Conferir conexão",
+        "description": "Escopo: token válido. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "nome": {
+                      "type": "string"
+                    },
+                    "empresa": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "canal": {
+                      "type": "string"
+                    },
+                    "origem": {
+                      "type": "string"
+                    },
+                    "escopos": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "estoque_politica": {
+                      "type": "string",
+                      "enum": [
+                        "SEM_MOVIMENTO"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produtos": {
+      "get": {
+        "summary": "Listar produtos e estoques",
+        "description": "Escopo: produtos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "busca",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "ean",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Produto"
+                      }
+                    },
+                    "next_cursor": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/produtos/{id}": {
+      "get": {
+        "summary": "Consultar produto",
+        "description": "Escopo: produtos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Produto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos": {
+      "post": {
+        "summary": "Criar pedido de forma idempotente",
+        "description": "Escopo: pedidos:criar. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarPedido"
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Listar pedidos desta conexão",
+        "description": "Escopo: pedidos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "referencia_externa",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "numero",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Código estável do status"
+            }
+          },
+          {
+            "name": "stage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "data_inicio",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Dia em UTC"
+            }
+          },
+          {
+            "name": "data_fim",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Dia em UTC, inclusivo"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100000,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Pedido"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    },
+                    "limit": {
+                      "type": "integer"
+                    },
+                    "offset": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}": {
+      "get": {
+        "summary": "Consultar pedido e andamento",
+        "description": "Escopo: pedidos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PedidoDetalhe"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/cancelar": {
+      "post": {
+        "summary": "Cancelar pedido elegível",
+        "description": "Escopo: pedidos:cancelar. Contexto da conta, empresa e canal vem da credencial.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Pedido"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "motivo": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "versao": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "motivo",
+                  "versao"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
