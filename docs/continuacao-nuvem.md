@@ -46,4 +46,4 @@ Não efetuar merge em master/main, deploy de produção, cobranças ou envio ext
 
 ## Atualização da etapa 4 — 30/10/2026
 
-A conta do comprador foi implementada; consultar [preparação e testes](conta-comprador.md). A empresa da loja ainda não existe no MuiraSoft: os envios reais aguardam esse cadastro e a configuração da conexão/SMTP. O banco e a chave da API foram preparados somente localmente, sem criar empresa fictícia. As alterações desta etapa ainda precisam ser publicadas para outra máquina/nuvem.
+A conta do comprador foi implementada; consultar [preparação e testes](conta-comprador.md). A empresa da loja ainda não existe no MuiraSoft: os envios reais aguardam esse cadastro e a configuração da conexão/SMTP. O banco e a chave da API foram preparados somente localmente, sem criar empresa fictícia. Na passagem de 02/11/2026, as alterações foram preparadas para publicação nas branches `codex/continuacao-nuvem`. Conferir os pushes e seguir o guia consolidado `docs/guia-continuidade-codex.md` do backend MuiraSoft; não reaplicar o pacote anterior aos commits publicados.
