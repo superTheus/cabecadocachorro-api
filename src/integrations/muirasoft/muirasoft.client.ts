@@ -53,6 +53,31 @@ export class MuiraSoftClient {
     return connection;
   }
 
+  async sendCustomerEmail(
+    payload: {
+      model: string;
+      recipient: string;
+      name: string;
+      token: string;
+      expires_at: string;
+    },
+    key: string,
+  ): Promise<void> {
+    await this.authorize('contas:email');
+    const response = await this.request('POST', 'contas/emails', payload, key);
+    if (
+      !response ||
+      typeof response !== 'object' ||
+      !('queued' in response) ||
+      response.queued !== true
+    )
+      throw new MuiraSoftError(
+        'MUIRASOFT_INVALID_RESPONSE',
+        502,
+        'Resposta de comunicação inválida.',
+      );
+  }
+
   async listProducts(
     filter: MuiraSoftProductFilter = {},
   ): Promise<MuiraSoftProductPage> {

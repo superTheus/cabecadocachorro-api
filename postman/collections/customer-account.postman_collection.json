@@ -1,0 +1,110 @@
+{
+  "info": {
+    "name": "Conta do comprador — consultas e rejeições seguras",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Executar somente em ambiente de teste. Não cria usuários válidos nem envia e-mails."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:3000"
+    },
+    {
+      "key": "store_origin",
+      "value": "http://localhost:5173"
+    }
+  ],
+  "item": [
+    {
+      "name": "Sessão obrigatória",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{store_origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 401\", () => pm.response.to.have.status(401));",
+              "pm.test(\"Erro sem segredo e sem cache\", () => {const d=pm.response.json(); pm.expect(d).not.to.have.property(\"token\"); pm.expect(d).not.to.have.property(\"password_hash\"); pm.expect(d.request_id).to.be.a(\"string\"); pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\");});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Origem obrigatória",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/logout",
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 403\", () => pm.response.to.have.status(403));",
+              "pm.test(\"Erro sem segredo e sem cache\", () => {const d=pm.response.json(); pm.expect(d).not.to.have.property(\"token\"); pm.expect(d).not.to.have.property(\"password_hash\"); pm.expect(d.request_id).to.be.a(\"string\"); pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\");});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cadastro valida senha",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Origin",
+            "value": "{{store_origin}}"
+          }
+        ],
+        "url": "{{base_url}}/api/v1/auth/register",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"name\": \"Fixture\", \"email\": \"fixture@example.test\", \"password\": \"curta\"}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+              "pm.test(\"Erro sem segredo e sem cache\", () => {const d=pm.response.json(); pm.expect(d).not.to.have.property(\"token\"); pm.expect(d).not.to.have.property(\"password_hash\"); pm.expect(d.request_id).to.be.a(\"string\"); pm.expect(pm.response.headers.get(\"Cache-Control\")).to.include(\"no-store\");});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

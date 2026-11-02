@@ -91,6 +91,23 @@ assumptions:
       contracts/muirasoft/provenance.json;
       docs/integracao-muirasoft.md
     updated_at: "2026-10-29"
+  - id: customer-mail-contract
+    status: supported
+    claim: >-
+      O cliente envia mensagens de conta ao mock HTTP com bearer, contexto da loja
+      e Idempotency-Key preservada, usando o contrato proprietário 1.1.0.
+    reason: >-
+      O harness observou a chamada real /integracao/v1/contas/emails e a chave do
+      evento. A deduplicação do backend foi verificada separadamente na suíte PHP;
+      isso não estabelece entrega SMTP ou funcionamento de uma conexão real.
+    verification: >-
+      Em 2026-10-30, test/integration/muirasoft-http.mjs passou 14 cenários HTTP
+      com Postman local. test/auth/mysql.mjs verificou retry com a mesma chave
+      em MySQL isolado; não foi consultada uma conta real do MuiraSoft.
+    source: >-
+      src/auth/auth-mail.worker.ts; src/integrations/muirasoft/muirasoft.client.ts;
+      test/integration/muirasoft-http.mjs; ../muirasoft/back/tests/EmailQueueTest.php
+    updated_at: "2026-10-30"
 fingerprints:
   - id: foundation-uncommitted-2026-10-29
     date: "2026-10-29"

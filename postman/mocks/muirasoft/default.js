@@ -13,7 +13,7 @@ const scenarios = new Set([
 const initial = () => ({ scenario: 'success', redirectUrl: null, calls: [], orders: {} });
 const context = () => ({
   nome: 'Loja de teste', empresa: 42, canal: 'test', origem: 'LOJA_VIRTUAL',
-  escopos: ['produtos:ler', 'pedidos:criar', 'pedidos:ler', 'pedidos:cancelar'],
+  escopos: ['produtos:ler', 'pedidos:criar', 'pedidos:ler', 'pedidos:cancelar','contas:email'],
   estoque_politica: 'SEM_MOVIMENTO',
 });
 const product = () => ({
@@ -81,6 +81,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'GET' && pathname === '/integracao/v1/produtos') return json(res, 200, { data: [product()], next_cursor: null });
     if (req.method === 'GET' && pathname === '/integracao/v1/produtos/7') return json(res, 200, product());
+    if (req.method === 'POST' && pathname === '/integracao/v1/contas/emails') {
+      if (!req.headers['idempotency-key'] || !['conta_confirmacao','conta_recuperacao'].includes(req.body?.model)) return json(res,422,{code:'INVALID_MESSAGE'});
+      return json(res,202,{queued:true,id:123});
+    }
     if (req.method === 'POST' && pathname === '/integracao/v1/pedidos') {
       const key = req.headers['idempotency-key'];
       if (!key || !req.body?.referencia_externa) return json(res, 422, { code: 'INVALID_ORDER', message: 'Chave e referência obrigatórias.', request_id: REQUEST_ID });

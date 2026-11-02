@@ -30,7 +30,9 @@
     "store:bind": "npm run build && node --env-file-if-exists=.env dist/commands/bind-store.js",
     "test:contracts": "node --test test/contracts.test.mjs",
     "contracts:prepare": "node scripts/prepare-muirasoft-contract.mjs",
-    "test:collection": "npm run build && node scripts/test-http-collection.mjs"
+    "test:collection": "npm run build && node scripts/test-http-collection.mjs",
+    "mail:process": "npm run build && node --env-file-if-exists=.env dist/commands/customer-mail.js",
+    "test:auth": "npm run build && node test/auth/mysql.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

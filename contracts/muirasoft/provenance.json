@@ -1,15 +1,15 @@
 {
   "service": "MuiraSoft",
-  "contract_version": "1.0.0",
-  "captured_on": "2026-10-29",
+  "contract_version": "1.1.0",
+  "captured_on": "2026-10-30",
   "source_repository": "muirasoft/back",
   "source_path": "docs/integracoes-openapi.json",
   "source_relative_to_this_repository": "../muirasoft/back/docs/integracoes-openapi.json",
   "snapshot_path": "contracts/muirasoft/integracoes-v1.openapi.json",
-  "sha256": "51797845f4a73eb9f0663183101aab72a64a28ae3e3a557b02696c2caa628862",
+  "sha256": "74a06168961c76b7504a30610d68fbe9a4717dba4b2c0b5f6ca5174ff35fb593",
   "policy": "Cópia exata do contrato existente. Atualizar snapshot e checksum somente após revisar alterações no contrato proprietário; não acrescentar operações planejadas nesta cópia.",
   "tooling_snapshot_path": "contracts/muirasoft/integracoes-v1.tooling.openapi.json",
-  "tooling_sha256": "9b401280eee6779bad917c9cc6e10282426238e730abcbfbfb1cafae8d61c736",
+  "tooling_sha256": "19eebfde76d0ccd957cfbc28669b2b2488221b90666b8c168aa56f06fc85ae63",
   "tooling_transform": {
     "description": "Remover somente required: []: lista vazia e ausência da propriedade têm o mesmo significado, mas OpenAPI 3.0 exige ao menos um item quando required é declarado. Nenhuma operação ou obrigação nova.",
     "removed_empty_required": [

@@ -50,6 +50,16 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       // A reachable server without the application's migrations is not ready.
       await this.probeQuery('SELECT id FROM store_bindings LIMIT 1');
       await this.probeQuery('SELECT id FROM integration_operations LIMIT 1');
+      if (this.config.auth?.enabled) {
+        for (const table of [
+          'customers',
+          'customer_sessions',
+          'customer_tokens',
+          'customer_mail_outbox',
+          'customer_rate_limits',
+        ])
+          await this.probeQuery('SELECT 1 FROM ' + table + ' LIMIT 1');
+      }
       return true;
     } catch {
       return false;

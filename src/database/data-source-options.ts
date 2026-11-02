@@ -1,3 +1,4 @@
+import { CustomerAccounts1793383200000 } from './migrations/1793383200000-customer-accounts.js';
 import { DataSource } from 'typeorm';
 import type { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions.js';
 import type { AppConfig } from '../config/app-config.js';
@@ -21,7 +22,10 @@ export function databaseOptions(config: AppConfig): MysqlConnectionOptions {
     connectTimeout: 5_000,
     poolSize: 5,
     entities: [],
-    migrations: [StoreIntegrationFoundation1793296800000],
+    migrations: [
+      StoreIntegrationFoundation1793296800000,
+      CustomerAccounts1793383200000,
+    ],
     migrationsTableName: 'store_migrations',
     migrationsTransactionMode: 'each',
     synchronize: false,

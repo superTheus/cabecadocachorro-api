@@ -61,7 +61,7 @@ try {
   check();
 
   assert.equal(await source.showMigrations(), true);
-  assert.equal((await source.runMigrations()).length, 1);
+  assert.equal((await source.runMigrations()).length, 2);
   assert.equal(await source.showMigrations(), false);
   assert.equal((await source.runMigrations()).length, 0);
   assert.equal(await service.isHealthy(), true);
@@ -131,6 +131,7 @@ try {
   );
   check();
 
+  await source.undoLastMigration();
   await source.undoLastMigration();
   assert.equal(await service.isHealthy(), false);
   assert.equal(await source.showMigrations(), true);

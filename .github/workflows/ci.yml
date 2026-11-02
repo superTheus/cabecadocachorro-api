@@ -41,3 +41,4 @@ jobs:
       - run: node test/integration/muirasoft-http.mjs
       - run: node scripts/test-http-collection.mjs
       - run: node test/database/foundation.mjs
+      - run: node test/auth/mysql.mjs

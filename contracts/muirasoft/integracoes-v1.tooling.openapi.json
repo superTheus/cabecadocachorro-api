@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "MuiraSoft Integração de Lojas",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "description": "API de servidor para lojas externas. Credenciais são gerenciadas em Configurações → Integrações. Estoque sem reserva; operações não criam recebimentos nem cancelam notas fiscais. Retry mantém o status e corpo originais; chave com outro conteúdo retorna 409."
   },
   "servers": [
@@ -1678,6 +1678,109 @@
                 ]
               }
             }
+          }
+        }
+      }
+    },
+    "/contas/emails": {
+      "post": {
+        "operationId": "queueCustomerEmail",
+        "summary": "Enfileirar confirmação ou recuperação da conta da loja",
+        "description": "Exige contas:email, disponível somente para conexão de administrador e escopo explicitamente concedido. INTEGRATION_STORE_ORIGINS_JSON define origem autorizada por conexão. O servidor monta o link; não aceita HTML, URL ou conta no corpo. Idempotência por conexão e UUID do evento.",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "model",
+                  "recipient",
+                  "name",
+                  "token",
+                  "expires_at"
+                ],
+                "properties": {
+                  "model": {
+                    "type": "string",
+                    "enum": [
+                      "conta_confirmacao",
+                      "conta_recuperacao"
+                    ]
+                  },
+                  "recipient": {
+                    "type": "string",
+                    "format": "email",
+                    "maxLength": 254
+                  },
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 150
+                  },
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$"
+                  },
+                  "expires_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "UTC ISO8601 com milissegundos; futuro até 24h para confirmação ou 30min para recuperação."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Mensagem enfileirada. Não comprova aceitação SMTP.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "queued",
+                    "id"
+                  ],
+                  "properties": {
+                    "queued": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "id": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Escopo não concedido"
+          },
+          "409": {
+            "description": "Evento reutilizado com outro conteúdo"
+          },
+          "422": {
+            "description": "Conteúdo ou prazo inválido"
+          },
+          "503": {
+            "description": "Domínio ou fila indisponível"
           }
         }
       }

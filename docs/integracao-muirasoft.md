@@ -76,7 +76,7 @@ Erros remotos têm `code`, `message`, `request_id` e, quando aplicável, `fields
 | Disponibilidade garantida | Ausente | Reserva compartilhada com PDV e demais saídas |
 | Pronta entrega e encomenda | Sem regras específicas no contrato | Modalidade por item, prazo e política de pedidos mistos |
 | Cobrança de pedido | Ausente; pagamentos enviados são previsões | Asaas por lojista, tentativas, webhooks e conciliação no MuiraSoft |
-| E-mails da loja | Sem endpoint na integração atual | Solicitação por modelo autorizado, configuração por lojista e fallback padrão |
+| E-mails de conta | `POST /contas/emails`, escopo `contas:email` | Origem autorizada no ERP, conexão de administrador e SMTP configurados |
 | Nota fiscal para comprador | Sem endpoint na integração externa | Acesso autorizado aos documentos e envio automático de PDF/XML pelo MuiraSoft |
 | Eventos MuiraSoft para a loja | Ausentes nesta integração | Sincronização e notificações com recuperação e controle de duplicidade |
 

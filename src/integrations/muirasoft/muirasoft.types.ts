@@ -1,6 +1,10 @@
 /** Server-side DTOs matching the MuiraSoft integration v1 contract. */
 export type MuiraSoftScope =
-  'produtos:ler' | 'pedidos:criar' | 'pedidos:ler' | 'pedidos:cancelar';
+  | 'produtos:ler'
+  | 'pedidos:criar'
+  | 'pedidos:ler'
+  | 'pedidos:cancelar'
+  | 'contas:email';
 
 export interface MuiraSoftConnection {
   nome: string;

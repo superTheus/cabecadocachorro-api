@@ -159,8 +159,9 @@ export function connectionResponse(value: unknown): MuiraSoftConnection {
         'pedidos:criar',
         'pedidos:ler',
         'pedidos:cancelar',
+        'contas:email',
       ),
-      4,
+      5,
     ),
     estoque_politica: policy,
   };

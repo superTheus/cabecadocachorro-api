@@ -61,7 +61,7 @@ O envio fiscal usa o e-mail do comprador registrado no pedido; a configuração 
 
 ## Estado da implementação em 29/10/2026
 
-Etapas 1 e 2 concluídas localmente. A próxima entrega é a etapa 3, notificações e fila. A configuração por lojista e o envio manual fiscal estão documentados no backend MuiraSoft em `docs/email-configuracao.md`. Consultar também [continuação na nuvem](continuacao-nuvem.md) para branches, repositórios, verificações e preparação do ambiente.
+Etapas 1 e 2 concluídas localmente. A etapa 4 foi implementada em 30/10/2026 (cadastro, confirmação, sessões, recuperação, troca de senha e Minha conta), com entrega real de e-mails pendente do cadastro da empresa e configuração da conexão/SMTP no MuiraSoft. Consulte [conta do comprador](conta-comprador.md). A etapa 3 foi iniciada em 30/10/2026: fila cifrada, worker, histórico e notificações de criação e todas as mudanças de status dos pedidos da loja. Conta do comprador, pagamento real e envio fiscal serão ligados nas respectivas etapas. Consulte `docs/email-fila.md` no backend MuiraSoft. A configuração por lojista e o envio manual fiscal estão documentados no backend MuiraSoft em `docs/email-configuracao.md`. Consultar também [continuação na nuvem](continuacao-nuvem.md) para branches, repositórios, verificações e preparação do ambiente.
 
 ## Recorte da etapa 1
 

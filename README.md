@@ -103,3 +103,7 @@ O OpenAPI público descreve a superfície implementada; a coleção carrega veri
 O snapshot original contém três declarações `required: []`, inválidas em OpenAPI 3.0. A [cópia para ferramentas](contracts/muirasoft/integracoes-v1.tooling.openapi.json) remove somente essas listas vazias, sem mudar campos obrigatórios ou operações. `npm run contracts:prepare` gera essa cópia com transformação e checksum registrados na proveniência. Os testes validam o contrato público e a cópia para ferramentas com Swagger Parser e verificam a integridade do original. O lint do Postman CLI instalado solicitou autenticação; a validação OpenAPI local não depende dela.
 
 Autenticação dos compradores e endereços pertencem ao NestJS. Produtos, operação comercial, pagamentos Asaas de cada lojista, financeiro, e-mails com servidor próprio/padrão e envio fiscal pertencem ao MuiraSoft. A política atual dos pedidos continua `SEM_MOVIMENTO`; esta fundação não habilita vendas com reserva, cobrança ou envio de mensagens.
+
+## Conta do comprador
+
+A etapa 4 acrescenta `/api/v1/auth` e mensagens de confirmação/recuperação por MuiraSoft. Consulte [configuração e testes](docs/conta-comprador.md). A empresa da loja ainda precisa ser cadastrada no ERP para ativar os envios reais.

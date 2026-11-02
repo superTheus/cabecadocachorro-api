@@ -1,3 +1,4 @@
+import { AuthModule } from './auth/auth.module.js';
 import { DynamicModule, Module } from '@nestjs/common';
 import { AppConfig } from './config/app-config.js';
 import { ConfigModule } from './config/config.module.js';
@@ -11,6 +12,7 @@ export class AppModule {
       imports: [
         ConfigModule.register(config),
         HealthModule,
+        AuthModule,
         ...(observe ? [observe] : []),
       ],
     };

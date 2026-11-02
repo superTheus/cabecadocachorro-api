@@ -10,7 +10,7 @@ const json = async (path) =>
 const publicSpec = await json('contracts/storefront.openapi.json');
 const upstream = await json('contracts/muirasoft/integracoes-v1.openapi.json');
 
-test('OpenAPI público e cópia de interoperabilidade passam no validador completo', async () => {
+await test('OpenAPI público e cópia de interoperabilidade passam no validador completo', async () => {
   for (const path of [
     'contracts/storefront.openapi.json',
     'contracts/muirasoft/integracoes-v1.tooling.openapi.json',
@@ -19,7 +19,7 @@ test('OpenAPI público e cópia de interoperabilidade passam no validador comple
   }
 });
 
-test('normalização para ferramentas modifica somente required vazio, com checksum próprio', async () => {
+await test('normalização para ferramentas modifica somente required vazio, com checksum próprio', async () => {
   const provenance = await json('contracts/muirasoft/provenance.json');
   const bytes = await readFile(new URL(provenance.tooling_snapshot_path, root));
   assert.equal(
@@ -51,20 +51,34 @@ function references(value, document) {
   for (const item of Object.values(value)) references(item, document);
 }
 
-test('contratos são OpenAPI e todas as referências locais resolvem', () => {
+await test('contratos são OpenAPI e todas as referências locais resolvem', () => {
   for (const spec of [publicSpec, upstream]) {
     assert.equal(spec.openapi, '3.0.3');
     references(spec, spec);
   }
 });
-test('superfície pública não expõe catálogo ou pedidos da conexão do lojista', () => {
-  assert.deepEqual(Object.keys(publicSpec.paths).sort(), [
-    '/api/v1/health/live',
-    '/api/v1/health/ready',
-  ]);
+await test('superfície pública não expõe catálogo ou pedidos da conexão do lojista', () => {
+  assert.deepEqual(
+    Object.keys(publicSpec.paths).sort(),
+    [
+      ...[
+        'register',
+        'login',
+        'forgot-password',
+        'resend-verification',
+        'verify-email',
+        'reset-password',
+        'change-password',
+        'logout',
+        'me',
+      ].map((name) => '/api/v1/auth/' + name),
+      '/api/v1/health/live',
+      '/api/v1/health/ready',
+    ].sort(),
+  );
   assert.ok(publicSpec.paths['/api/v1/health/ready'].get.responses['503']);
 });
-test('snapshot do MuiraSoft preserva checksum e registra origem', async () => {
+await test('snapshot do MuiraSoft preserva checksum e registra origem', async () => {
   const provenance = await json('contracts/muirasoft/provenance.json');
   const bytes = await readFile(new URL(provenance.snapshot_path, root));
   assert.equal(
@@ -73,7 +87,7 @@ test('snapshot do MuiraSoft preserva checksum e registra origem', async () => {
   );
   assert.equal(provenance.source_repository, 'muirasoft/back');
 });
-test('contrato existente exige idempotência em criação e cancelamento', () => {
+await test('contrato existente exige idempotência em criação e cancelamento', () => {
   for (const path of ['/pedidos', '/pedidos/{id}/cancelar']) {
     assert.ok(
       upstream.paths[path].post.parameters.some(

@@ -175,6 +175,15 @@ try {
   assert.equal(Object.keys(uncertain.orders).length, 1);
   pass('timeout após persistência simulada não repete POST automaticamente');
 
+  await control('success');
+  const emailKey='11111111-1111-4111-8111-111111111111';
+  await client().sendCustomerEmail({model:'conta_confirmacao',recipient:'fixture@example.test',name:'Fixture',token:'x'.repeat(43),expires_at:new Date(Date.now()+600000).toISOString()},emailKey);
+  const mails=(await stats()).calls;
+  assert.equal(mails.at(-1).path,'/integracao/v1/contas/emails');
+  assert.equal(mails.at(-1).idempotencyKey,emailKey);
+  assert.equal(mails.at(-1).authenticated,true);
+  pass('mensagem de conta usa o cliente real, bearer e evento idempotente por HTTP local');
+
   // The CLI's NDJSON is inspected in-memory; no request log is committed.
   for (let i = 0; i < 10 && !events.some((event) => event.event === 'request' && event.path === '/integracao/v1/pedidos'); i++) await pause(50);
   assert.ok(events.some((event) => event.event === 'request' && event.path === '/integracao/v1/conexao'));

@@ -25,6 +25,9 @@ export class AppConfig {
       appKey?: string;
       appSecret?: string;
     }>,
+    readonly auth: Readonly<{ enabled: boolean; key?: string }> = {
+      enabled: false,
+    },
   ) {}
 
   get integrationConfigured(): boolean {
@@ -183,6 +186,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   )
     invalid('OBSERVE_APP_KEY/OBSERVE_APP_SECRET');
 
+  const authEnabled = boolean(env, 'AUTH_ENABLED', false);
+  const authKey = env.AUTH_ENCRYPTION_KEY;
+  if (
+    authEnabled &&
+    (!enabled ||
+      !authKey ||
+      !/^[A-Za-z0-9+/]{43}=$/.test(authKey) ||
+      Buffer.from(authKey, 'base64').length !== 32)
+  )
+    invalid('AUTH_ENABLED/AUTH_ENCRYPTION_KEY/DATABASE_ENABLED');
+  // Observe instruments request bodies; customer secrets must never enter traces.
+  if (authEnabled && observeEnabled) invalid('OBSERVE_ENABLED');
+
   return new AppConfig(
     environment as AppConfig['environment'],
     integer(env.PORT, 'PORT', 3000, 65535),
@@ -206,5 +222,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       appKey: env.OBSERVE_APP_KEY,
       appSecret: env.OBSERVE_APP_SECRET,
     }),
+    Object.freeze({ enabled: authEnabled, key: authKey }),
   );
 }

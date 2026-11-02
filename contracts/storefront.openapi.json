@@ -115,6 +115,663 @@
           }
         }
       }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "operationId": "customerRegister",
+        "summary": "register",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "202": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "name",
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "customerLogin",
+        "summary": "login",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "email_verified"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "email_verified": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "cabeca_session: HttpOnly; SameSite=Lax; Secure em produção; Path=/api/v1; sete dias."
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email",
+                  "password"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/forgot-password": {
+      "post": {
+        "operationId": "customerForgotPassword",
+        "summary": "forgot-password",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "202": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/resend-verification": {
+      "post": {
+        "operationId": "customerResendVerification",
+        "summary": "resend-verification",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "202": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/verify-email": {
+      "post": {
+        "operationId": "customerVerifyEmail",
+        "summary": "verify-email",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "token"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/reset-password": {
+      "post": {
+        "operationId": "customerResetPassword",
+        "summary": "reset-password",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "token",
+                  "password"
+                ],
+                "properties": {
+                  "token": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]{43}$"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 256
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/change-password": {
+      "post": {
+        "operationId": "customerChangePassword",
+        "summary": "change-password",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "current_password",
+                  "password"
+                ],
+                "properties": {
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 12,
+                    "maxLength": 256
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "customerSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "operationId": "customerLogout",
+        "summary": "logout",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Origin",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Origem exata de STORE_URL."
+          }
+        ],
+        "security": [
+          {
+            "customerSession": []
+          }
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "customerMe",
+        "summary": "me",
+        "description": "Conta do comprador; cookies protegidos, erros genéricos e limitação persistente. Tokens jamais retornam na resposta.",
+        "responses": {
+          "200": {
+            "description": "Perfil seguro ou confirmação da solicitação.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "email_verified"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "email_verified": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados ou token inválidos/expirados"
+          },
+          "401": {
+            "description": "Credencial, confirmação ou sessão inválida"
+          },
+          "403": {
+            "description": "Origem não autorizada"
+          },
+          "429": {
+            "description": "Limite atingido"
+          },
+          "503": {
+            "description": "Módulo ou banco indisponível"
+          }
+        },
+        "security": [
+          {
+            "customerSession": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -234,6 +891,13 @@
             "format": "uuid"
           }
         }
+      }
+    },
+    "securitySchemes": {
+      "customerSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "cabeca_session"
       }
     }
   }
