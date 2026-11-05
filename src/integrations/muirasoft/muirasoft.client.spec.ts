@@ -157,7 +157,7 @@ describe('MuiraSoftClient boundaries', () => {
       response(connection),
       response({
         ...product,
-        estoque: { ...product.estoque, politica: 'RESERVA' },
+        estoque: { ...product.estoque, politica: 'POLITICA_DESCONHECIDA' },
       }),
     );
     await expect(client().getProduct(7)).rejects.toMatchObject({

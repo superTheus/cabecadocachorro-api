@@ -42,3 +42,7 @@ jobs:
       - run: node scripts/test-http-collection.mjs
       - run: node test/database/foundation.mjs
       - run: node test/auth/mysql.mjs
+
+      - run: node test/profile/mysql.mjs
+      - run: node test/checkout/mysql.mjs
+      - run: node test/orders/mysql.mjs

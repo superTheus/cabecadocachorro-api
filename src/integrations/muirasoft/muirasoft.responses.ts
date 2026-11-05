@@ -95,7 +95,7 @@ function timestamp(value: unknown): string {
 }
 
 const origin = literal('LOJA_VIRTUAL', 'MARKETPLACE', 'API', 'INTEGRACAO');
-const policy = literal('SEM_MOVIMENTO');
+const policy = literal('SEM_MOVIMENTO', 'RESERVA');
 const statusSchema = {
   codigo: string,
   nome: string,
@@ -160,8 +160,12 @@ export function connectionResponse(value: unknown): MuiraSoftConnection {
         'pedidos:ler',
         'pedidos:cancelar',
         'contas:email',
+        'pagamentos:criar',
+        'pagamentos:ler',
+        'checkout:criar',
+        'checkout:ler',
       ),
-      5,
+      9,
     ),
     estoque_politica: policy,
   };
@@ -177,8 +181,8 @@ export function productResponse(value: unknown): MuiraSoftProduct {
     cadastrado: boolean,
     fisico: nullable(quantity),
     politica: policy,
-    reservado: literal(null),
-    disponivel_para_venda: literal(null),
+    reservado: nullable(quantity),
+    disponivel_para_venda: nullable(quantity),
     consultado_em: timestamp,
     versao: nullable(integer),
   };
@@ -190,6 +194,63 @@ export function productResponse(value: unknown): MuiraSoftProduct {
     controla_estoque: boolean,
     kit: boolean,
     preco_venda: nullable(decimal),
+    categoria: nullable(string),
+    imagens: array((value) => shape(value, { id }, ['id']), 10),
+    loja: nullable((value: unknown) => {
+      const publication = shape(
+        value,
+        {
+          titulo: string,
+          descricao: string,
+          categoria: string,
+          imagens: array((value: unknown) => {
+            const url = string(value);
+            let parsed: URL;
+            try {
+              parsed = new URL(url);
+            } catch {
+              return invalid();
+            }
+            if (
+              parsed.protocol !== 'https:' ||
+              parsed.username ||
+              parsed.password ||
+              parsed.hash ||
+              url.length > 2048
+            )
+              invalid();
+            return url;
+          }, 8),
+          grupo_variacao: nullable(string),
+          cor: string,
+          tamanho: string,
+          modalidade: literal('PRONTA_ENTREGA', 'ENCOMENDA', 'MISTA'),
+          prazo_dias: nullable(id),
+        },
+        [
+          'titulo',
+          'descricao',
+          'categoria',
+          'imagens',
+          'grupo_variacao',
+          'cor',
+          'tamanho',
+          'modalidade',
+          'prazo_dias',
+        ],
+      );
+      const images = publication.imagens as string[];
+      if (
+        !images.length ||
+        (publication.prazo_dias !== null &&
+          (publication.prazo_dias as number) > 365) ||
+        (publication.modalidade === 'PRONTA_ENTREGA'
+          ? publication.prazo_dias !== null
+          : publication.prazo_dias === null)
+      )
+        invalid();
+      return publication;
+    }),
     estoque: (stock: unknown) =>
       shape(stock, stockSchema, [
         'cadastrado',
@@ -251,6 +312,33 @@ export function orderDetailResponse(value: unknown): MuiraSoftOrderDetail {
     desconto_real: decimal,
     acrescimo: decimal,
     descricao: string,
+    modalidade: nullable(literal('PRONTA_ENTREGA', 'ENCOMENDA')),
+    prazo_producao_dias: nullable(id),
+    loja_snapshot: nullable((value: unknown) =>
+      shape(
+        value,
+        {
+          titulo: string,
+          descricao: string,
+          categoria: string,
+          imagens: array(string, 8),
+          grupo_variacao: nullable(string),
+          cor: string,
+          tamanho: string,
+          controla_estoque: boolean,
+        },
+        [
+          'titulo',
+          'descricao',
+          'categoria',
+          'imagens',
+          'grupo_variacao',
+          'cor',
+          'tamanho',
+          'controla_estoque',
+        ],
+      ),
+    ),
     total: decimal,
   };
   const historySchema = {
@@ -261,6 +349,27 @@ export function orderDetailResponse(value: unknown): MuiraSoftOrderDetail {
   };
   const schema = {
     ...orderSchema,
+    reservas: array((value: unknown) =>
+      shape(
+        value,
+        {
+          id_item: id,
+          quantidade: quantity,
+          estado: literal(
+            'ATIVA',
+            'GARANTIDA',
+            'CONSUMIDA',
+            'LIBERADA',
+            'EXPIRADA',
+            'SEM_CONTROLE',
+          ),
+          expira_em: nullable(timestamp),
+        },
+        ['id_item', 'quantidade', 'estado', 'expira_em'],
+      ),
+    ),
+    estoque_saida_em: nullable(timestamp),
+    entrega_tipo: nullable(literal('EXPEDICAO', 'RETIRADA')),
     cliente: nullable((customer) =>
       shape(customer, customerSchema, ['referencia_externa', 'nome']),
     ),

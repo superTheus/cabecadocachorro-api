@@ -27,6 +27,7 @@ type Customer = {
   name: string;
   password_hash: string;
   verified_at: Date | null;
+  phone: string;
 };
 type ActionToken = { customer_id: string; token_hash: string; purpose: string };
 export const genericMessage = {
@@ -78,6 +79,7 @@ export class AuthService {
       id: customer.id,
       name: customer.name,
       email: customer.email,
+      phone: customer.phone,
       email_verified: !!customer.verified_at,
     };
   }

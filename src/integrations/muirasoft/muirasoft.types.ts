@@ -4,7 +4,11 @@ export type MuiraSoftScope =
   | 'pedidos:criar'
   | 'pedidos:ler'
   | 'pedidos:cancelar'
-  | 'contas:email';
+  | 'contas:email'
+  | 'pagamentos:criar'
+  | 'pagamentos:ler'
+  | 'checkout:criar'
+  | 'checkout:ler';
 
 export interface MuiraSoftConnection {
   nome: string;
@@ -12,10 +16,25 @@ export interface MuiraSoftConnection {
   canal: string;
   origem: 'LOJA_VIRTUAL' | 'MARKETPLACE' | 'API' | 'INTEGRACAO';
   escopos: MuiraSoftScope[];
-  estoque_politica: 'SEM_MOVIMENTO';
+  estoque_politica: 'SEM_MOVIMENTO' | 'RESERVA';
 }
 
+export interface MuiraSoftProductPublication {
+  titulo: string;
+  descricao: string;
+  categoria: string;
+  imagens: string[];
+  grupo_variacao: string | null;
+  cor: string;
+  tamanho: string;
+  modalidade: 'PRONTA_ENTREGA' | 'ENCOMENDA' | 'MISTA';
+  prazo_dias: number | null;
+}
 export interface MuiraSoftProduct {
+  /** Optional presentation overrides; ordinary products are available automatically. */
+  loja?: MuiraSoftProductPublication | null;
+  categoria?: string | null;
+  imagens?: { id: number }[];
   id: number;
   descricao: string;
   unidade?: string | null;
@@ -26,9 +45,9 @@ export interface MuiraSoftProduct {
   estoque: {
     cadastrado: boolean;
     fisico: string | null;
-    politica: 'SEM_MOVIMENTO';
-    reservado: null;
-    disponivel_para_venda: null;
+    politica: 'SEM_MOVIMENTO' | 'RESERVA';
+    reservado: string | null;
+    disponivel_para_venda: string | null;
     consultado_em: string;
     versao?: number | null;
   };
@@ -64,6 +83,7 @@ export interface MuiraSoftCustomer {
 }
 
 export interface MuiraSoftOrderItemInput {
+  modalidade?: 'PRONTA_ENTREGA' | 'ENCOMENDA';
   id_produto: number;
   quantidade: string;
   preco: string;
@@ -111,13 +131,32 @@ export interface MuiraSoftOrder {
   criado_em?: string;
   atualizado_em?: string;
   cancelado_em?: string | null;
-  estoque_politica?: 'SEM_MOVIMENTO';
+  estoque_politica?: 'SEM_MOVIMENTO' | 'RESERVA';
 }
 
 export interface MuiraSoftOrderDetail extends MuiraSoftOrder {
+  reservas?: Array<{
+    id_item: number;
+    quantidade: string;
+    estado: string;
+    expira_em: string | null;
+  }>;
+  estoque_saida_em?: string | null;
+  entrega_tipo?: 'EXPEDICAO' | 'RETIRADA' | null;
   cliente: MuiraSoftCustomer | null;
   itens: Array<
     Omit<MuiraSoftOrderItemInput, 'desconto_percentual'> & {
+      loja_snapshot?: {
+        titulo: string;
+        descricao: string;
+        categoria: string;
+        imagens: string[];
+        grupo_variacao: string | null;
+        cor: string;
+        tamanho: string;
+        controla_estoque: boolean;
+      } | null;
+      prazo_producao_dias?: number | null;
       descricao?: string;
       total?: string;
     }

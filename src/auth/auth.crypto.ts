@@ -38,10 +38,15 @@ export async function passwordMatches(
   const actual = await derive(password, valid ? parts[1] : '0'.repeat(32));
   return valid && timingSafeEqual(actual, Buffer.from(parts[2], 'hex'));
 }
-export function seal(value: unknown, key: string, store: string): string {
+export function seal(
+  value: unknown,
+  key: string,
+  store: string,
+  purpose = 'customer-mail',
+): string {
   const nonce = randomBytes(12),
     cipher = createCipheriv('aes-256-gcm', Buffer.from(key, 'base64'), nonce);
-  cipher.setAAD(Buffer.from('customer-mail:' + store));
+  cipher.setAAD(Buffer.from(purpose + ':' + store));
   const encrypted = Buffer.concat([
     cipher.update(JSON.stringify(value), 'utf8'),
     cipher.final(),
@@ -50,7 +55,12 @@ export function seal(value: unknown, key: string, store: string): string {
     .map((b) => b.toString('base64'))
     .join('.');
 }
-export function unseal(value: string, key: string, store: string): unknown {
+export function unseal(
+  value: string,
+  key: string,
+  store: string,
+  purpose = 'customer-mail',
+): unknown {
   const [nonce, tag, encrypted] = value
     .split('.')
     .map((v) => Buffer.from(v, 'base64'));
@@ -59,7 +69,7 @@ export function unseal(value: string, key: string, store: string): unknown {
     Buffer.from(key, 'base64'),
     nonce,
   );
-  cipher.setAAD(Buffer.from('customer-mail:' + store));
+  cipher.setAAD(Buffer.from(purpose + ':' + store));
   cipher.setAuthTag(tag);
   return JSON.parse(
     Buffer.concat([cipher.update(encrypted), cipher.final()]).toString('utf8'),

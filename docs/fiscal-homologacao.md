@@ -1,0 +1,11 @@
+# Fiscal e validação final local — etapas 14/15
+
+Atualizado em 03/11/2026. Contrato público 0.6.0 e contrato MuiraSoft 1.7.0, com snapshot exato, checksum e cópia para ferramentas atualizados. Não há migration adicional da API nesta etapa.
+
+`GET /api/v1/orders/{id}/documents/{document}/{format}` exige cookie de sessão verificada e vínculo ativo da loja. A API deriva a referência do comprador, consulta os arquivos pelo ERP e revalida a sessão antes da resposta. Reconstrói metadados fiscais por whitelist e confere nome, MIME, tamanho, hash e estrutura básica do arquivo. Retorna bytes originais com `Content-Disposition: attachment`, `private, no-store`, `nosniff` e CSP restritiva. Não grava arquivo/endereço fiscal em armazenamento do navegador, nem oferece URL pública. Limites: PDF 4 MiB, XML 2 MiB; limite remoto ampliado para 6 MiB somente nessa operação.
+
+Metadados `documents` pertencem ao detalhe do pedido. Ambiente HOMOLOGACAO fica explícito na loja. Autorização e arquivos válidos são obrigatórios para download; cancelamento revoga acesso. Emissão e e-mail continuam no MuiraSoft, separados de pagamento e estoque. Somente o MuiraSoft controla estoque, em produtos com controle ativo.
+
+Validação local: 137 unitários, 14 e2e, seis contratos, 30 verificações HTTP/MySQL de acompanhamento/download, 28 de checkout e dez de banco; build, tipos e lint aprovados. A loja passou 22 testes e build. `test/pilot/php-erp.mjs` é chamado pelo runner ERP `php tests/run-integracoes.php --bridge`, depois de compilar a API. Usa schemas sintéticos e token efêmero, NestJS/PHP reais, rede restrita ao ERP local e nenhuma cobrança externa. Não executar diretamente com banco de negócio. O runner remove os schemas e encerra os processos.
+
+O guia e o relatório canônicos estão em `muirasoft/back/docs/guia-continuidade-codex.md` e `muirasoft/back/docs/homologacao-etapas-14-15.md`, no checkout irmão. A implementação fiscal e a validação técnica local foram concluídas. **Homologação empresarial, revisão visual e produção permanecem pendentes**: empresa/conexão legítimas ainda ausentes, SMTP/emissor/Asaas reais não homologados, workers não ativados. O acesso visual ao Chrome foi encerrado automaticamente por impossibilidade de identificar a URL atual com segurança. Sem bypass, cobrança, emissão fiscal real, mensagem externa, commit, push ou deploy.

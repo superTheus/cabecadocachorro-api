@@ -53,10 +53,14 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
       if (this.config.auth?.enabled) {
         for (const table of [
           'customers',
+          'customer_addresses',
           'customer_sessions',
           'customer_tokens',
           'customer_mail_outbox',
           'customer_rate_limits',
+          'checkout_sessions',
+          'checkout_payment_intents',
+          'customer_order_requests',
         ])
           await this.probeQuery('SELECT 1 FROM ' + table + ' LIMIT 1');
       }

@@ -3,18 +3,26 @@ import {
   Controller,
   Get,
   Post,
+  Put,
+  Delete,
+  Param,
   Req,
   Res,
   HttpCode,
   ForbiddenException,
+  UnauthorizedException,
   Inject,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service.js';
+import { CustomerService } from './customer.service.js';
 const COOKIE = 'cabeca_session';
 @Controller('auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly auth: AuthService) {}
+  constructor(
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(CustomerService) private readonly customer: CustomerService,
+  ) {}
   private origin(req: Request): void {
     if (req.headers.origin !== this.auth.config.store.url)
       throw new ForbiddenException();
@@ -37,6 +45,43 @@ export class AuthController {
       maxAge: value ? 7 * 86400 * 1000 : 0,
     });
   }
+  @Put('profile')
+  updateProfile(@Req() r: Request, @Body() b: unknown) {
+    this.origin(r);
+    return this.customer.profile(this.session(r), b);
+  }
+  @Get('addresses')
+  addresses(@Req() r: Request) {
+    return this.customer.list(this.session(r));
+  }
+  @Post('addresses')
+  createAddress(@Req() r: Request, @Body() b: unknown) {
+    this.origin(r);
+    return this.customer.save(this.session(r), b);
+  }
+  @Put('addresses/:id')
+  updateAddress(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Body() b: unknown,
+  ) {
+    this.origin(r);
+    return this.customer.save(this.session(r), b, id);
+  }
+  @Put('addresses/:id/default')
+  defaultAddress(
+    @Req() r: Request,
+    @Param('id') id: string,
+    @Body() b: unknown,
+  ) {
+    this.origin(r);
+    return this.customer.setDefault(this.session(r), id, b);
+  }
+  @Delete('addresses/:id')
+  deleteAddress(@Req() r: Request, @Param('id') id: string) {
+    this.origin(r);
+    return this.customer.remove(this.session(r), id);
+  }
   @Post('register')
   @HttpCode(202)
   register(@Req() r: Request, @Body() b: unknown) {
@@ -57,6 +102,16 @@ export class AuthController {
   }
   @Get('me') async me(@Req() r: Request) {
     return this.auth.profile(await this.auth.me(this.session(r)));
+  }
+  @Get('session') async currentSession(@Req() r: Request) {
+    const session = this.session(r);
+    if (!session) return { user: null };
+    try {
+      return { user: this.auth.profile(await this.auth.me(session)) };
+    } catch (error) {
+      if (error instanceof UnauthorizedException) return { user: null };
+      throw error;
+    }
   }
   @Post('logout')
   @HttpCode(200)

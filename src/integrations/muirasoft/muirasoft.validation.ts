@@ -98,7 +98,14 @@ export function createOrderInput(
       'desconto_real',
       'desconto_percentual',
       'acrescimo',
+      'modalidade',
     ]);
+    if (
+      row['modalidade'] !== undefined &&
+      (typeof row['modalidade'] !== 'string' ||
+        !['PRONTA_ENTREGA', 'ENCOMENDA'].includes(row['modalidade']))
+    )
+      invalidInput();
     positiveId(row['id_produto']);
     if (Number(decimal(row['quantidade'], 4)) <= 0) invalidInput();
     decimal(row['preco'], 2);

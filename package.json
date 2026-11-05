@@ -32,7 +32,10 @@
     "contracts:prepare": "node scripts/prepare-muirasoft-contract.mjs",
     "test:collection": "npm run build && node scripts/test-http-collection.mjs",
     "mail:process": "npm run build && node --env-file-if-exists=.env dist/commands/customer-mail.js",
-    "test:auth": "npm run build && node test/auth/mysql.mjs"
+    "test:auth": "npm run build && node test/auth/mysql.mjs",
+    "test:profile": "npm run build && node test/profile/mysql.mjs",
+    "test:checkout": "npm run build && node test/checkout/mysql.mjs",
+    "test:orders": "npm run build && node test/orders/mysql.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",

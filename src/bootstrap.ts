@@ -26,6 +26,8 @@ export async function createApplication(
     },
   );
   app.disable('x-powered-by');
+  if (config.trustedProxies.length)
+    app.set('trust proxy', config.trustedProxies);
   app.use((_req: Request, res: Response, next: NextFunction) => {
     res.setHeader('X-Request-Id', randomUUID());
     res.setHeader('Cache-Control', 'no-store');

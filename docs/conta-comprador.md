@@ -36,3 +36,11 @@ A loja foi validada com APIs interceptadas no navegador: cadastro, login, perfil
 Histórico de pedidos reais, endereços, checkout e conciliação com clientes antigos continuam nas respectivas etapas do plano. O UUID do comprador é a referência estável para futuras compras, sem vincular histórico automaticamente por e-mail.
 
 Validação em 30/10/2026: API com 69 testes unitários, 7 cenários e2e da fundação, 24 verificações HTTP/MySQL de conta/outbox (incluindo seis asserções Postman), 10 verificações de migração e 14 cenários HTTP contra mock Postman, além de build, tipos, lint e seis testes de contratos. MuiraSoft: 121 verificações do módulo de e-mails, 15 HTTP e oito asserções Postman; frontend MuiraSoft com build e 43 testes. Loja com build e revisão visual/funcional em navegador.
+
+## Atualização em 02/11/2026 — etapa 5
+
+Perfil editável e CRUD de endereços foram implementados. São agora três migrations; ver [perfil e endereços](perfil-enderecos.md) para contrato, regras e testes. As contagens e pendências das seções anteriores registram a entrega histórica da etapa 4.
+
+## Atualização em 02/11/2026 — etapa 13
+
+Histórico, acompanhamento e solicitações por comprador foram implementados, preservando a referência estável e sem associação automática por e-mail/documento. São cinco migrations da API. Meus pedidos usa sessão verificada, snapshots da compra e projeção sem observações internas; ver [área do cliente e pedidos](area-cliente-pedidos.md). Download fiscal pertence à etapa 14. Revisão visual desta ampliação e homologação com empresa real continuam pendentes.

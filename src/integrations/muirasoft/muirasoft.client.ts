@@ -1,6 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { AppConfig } from '../../config/app-config.js';
 import { MuiraSoftError } from './muirasoft.error.js';
+import { fiscalFile } from './muirasoft.fiscal.js';
+import {
+  trackingPage,
+  trackingOrder,
+  publicOrderId,
+} from './muirasoft.tracking.js';
 import {
   connectionResponse,
   orderDetailResponse,
@@ -32,11 +38,124 @@ import {
 } from './muirasoft.validation.js';
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
+import {
+  quoteResponse,
+  optionsResponse,
+  type CheckoutQuoteInput,
+} from './muirasoft.checkout.js';
+import {
+  paymentInput,
+  paymentKey,
+  paymentResponse,
+  paymentsResponse,
+  pixResponse,
+  type PaymentInput,
+  type StorePayment,
+} from './muirasoft.payments.js';
 
 /** Internal adapter. Do not expose these connection-wide methods as customer HTTP routes. */
 @Injectable()
 export class MuiraSoftClient {
   constructor(@Inject(AppConfig) private readonly config: AppConfig) {}
+  async productImage(product: number, image: number) {
+    positiveId(product); positiveId(image);
+    await this.authorize('produtos:ler');
+    const value = await this.request('GET', `produtos/${product}/imagens/${image}`, undefined, undefined, 15000, 15000000);
+    const p = value as { mime?: unknown; content_base64?: unknown } | null;
+    if (!p || !['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(p.mime as string)
+      || typeof p.content_base64 !== 'string' || !/^[A-Za-z0-9+/]+={0,2}$/u.test(p.content_base64)) {
+      throw new MuiraSoftError('MUIRASOFT_INVALID_RESPONSE', 502, 'Imagem indisponível.');
+    }
+    const content = Buffer.from(p.content_base64, 'base64');
+    if (content.length > 10485760 || content.toString('base64') !== p.content_base64)
+      throw new MuiraSoftError('MUIRASOFT_INVALID_RESPONSE', 502, 'Imagem indisponível.');
+    return { content, mime: p.mime as string };
+  }
+  async customerFiscalFile(
+    buyer: string,
+    id: string,
+    doc: string,
+    format: 'pdf' | 'xml',
+  ) {
+    publicOrderId(id);
+    publicOrderId(doc);
+    await this.authorize('pedidos:ler');
+    const data = await this.request(
+      'GET',
+      this.path(
+        `compradores/pedidos/${id}/documentos/${doc}/${format}`,
+        new URLSearchParams({ referencia_comprador: buyer }),
+      ),
+      undefined,
+      undefined,
+      15000,
+      6 * 1024 * 1024,
+    );
+    return fiscalFile(data, doc, format);
+  }
+  async customerOrders(buyer: string, cursor?: string, limit = 20) {
+    await this.authorize('pedidos:ler');
+    return trackingPage(
+      await this.request(
+        'GET',
+        this.path(
+          'compradores/pedidos',
+          new URLSearchParams({
+            referencia_comprador: buyer,
+            limit: String(limit),
+            ...(cursor ? { cursor: publicOrderId(cursor) } : {}),
+          }),
+        ),
+      ),
+    );
+  }
+  async customerOrder(buyer: string, id: string) {
+    publicOrderId(id);
+    await this.authorize('pedidos:ler');
+    return trackingOrder(
+      await this.request(
+        'GET',
+        this.path(
+          `compradores/pedidos/${id}`,
+          new URLSearchParams({ referencia_comprador: buyer }),
+        ),
+      ),
+      id,
+    );
+  }
+  async customerOrderRequest(
+    buyer: string,
+    id: string,
+    body: {
+      type: string;
+      message: string;
+      items: { id: string; quantity: string }[];
+    },
+    key: string,
+  ) {
+    publicOrderId(id);
+    paymentKey(key);
+    await this.authorize('pedidos:criar');
+    const result = await this.request(
+      'POST',
+      `compradores/pedidos/${id}/solicitacoes`,
+      { ...body, referencia_comprador: buyer },
+      key,
+    );
+    if (
+      !result ||
+      typeof result !== 'object' ||
+      !('accepted' in result) ||
+      result.accepted !== true ||
+      !('id' in result)
+    )
+      throw new MuiraSoftError(
+        'MUIRASOFT_INVALID_RESPONSE',
+        502,
+        'Solicitação indisponível.',
+      );
+    return { id: publicOrderId(result.id), accepted: true as const };
+  }
 
   async checkConnection(): Promise<MuiraSoftConnection> {
     const connection = connectionResponse(await this.request('GET', 'conexao'));
@@ -118,6 +237,101 @@ export class MuiraSoftClient {
     return page;
   }
 
+  async createPayment(
+    orderId: number,
+    input: PaymentInput,
+    key: string,
+  ): Promise<StorePayment> {
+    const id = positiveId(orderId),
+      body = paymentInput(input),
+      validatedKey = paymentKey(key);
+    if (body.metodo === 'CREDIT_CARD' && this.config.observe.enabled)
+      throw new MuiraSoftError(
+        'MUIRASOFT_SENSITIVE_TRACING',
+        503,
+        'Desative a captura de dados sensíveis antes de processar cartão.',
+      );
+    await this.authorize('pagamentos:criar');
+    return paymentResponse(
+      await this.request(
+        'POST',
+        `pedidos/${id}/pagamentos`,
+        body,
+        validatedKey,
+        180000,
+      ),
+      id,
+    );
+  }
+
+  async listPayments(orderId: number, key?: string): Promise<StorePayment[]> {
+    const id = positiveId(orderId);
+    await this.authorize('pagamentos:ler');
+    return paymentsResponse(
+      await this.request(
+        'GET',
+        `pedidos/${id}/pagamentos` +
+          (key === undefined ? '' : '?chave=' + paymentKey(key)),
+      ),
+      id,
+    );
+  }
+  async checkoutOptions(cep: string) {
+    if (!/^\d{8}$/u.test(cep))
+      throw new MuiraSoftError('MUIRASOFT_INVALID_INPUT', 422, 'CEP inválido.');
+    await this.authorize('checkout:ler');
+    return optionsResponse(
+      await this.request('GET', 'checkout/opcoes?cep=' + cep),
+    );
+  }
+  async createCheckoutQuote(input: CheckoutQuoteInput, key: string) {
+    await this.authorize('checkout:criar');
+    return quoteResponse(
+      await this.request('POST', 'checkout/cotacoes', input, paymentKey(key)),
+    );
+  }
+  async getCheckoutQuote(id: string, buyer: string) {
+    if (!/^[a-f0-9]{32}$/u.test(id))
+      throw new MuiraSoftError(
+        'MUIRASOFT_INVALID_INPUT',
+        422,
+        'Checkout inválido.',
+      );
+    await this.authorize('checkout:ler');
+    return quoteResponse(
+      await this.request(
+        'GET',
+        `checkout/cotacoes/${id}?referencia_comprador=${encodeURIComponent(buyer)}`,
+      ),
+    );
+  }
+  async confirmCheckoutQuote(id: string, buyer: string) {
+    if (!/^[a-f0-9]{32}$/u.test(id))
+      throw new MuiraSoftError(
+        'MUIRASOFT_INVALID_INPUT',
+        422,
+        'Checkout inválido.',
+      );
+    await this.authorize('checkout:criar');
+    return quoteResponse(
+      await this.request(
+        'POST',
+        `checkout/cotacoes/${id}/confirmar`,
+        { referencia_comprador: buyer },
+        'confirmar-' + id,
+      ),
+    );
+  }
+
+  async getPaymentPix(orderId: number, paymentId: number) {
+    const id = positiveId(orderId),
+      payment = positiveId(paymentId);
+    await this.authorize('pagamentos:ler');
+    return pixResponse(
+      await this.request('GET', `pedidos/${id}/pagamentos/${payment}/pix`),
+    );
+  }
+
   async getOrder(orderId: number): Promise<MuiraSoftOrderDetail> {
     const id = positiveId(orderId);
     await this.authorize('pedidos:ler');
@@ -182,6 +396,8 @@ export class MuiraSoftClient {
     resource: string,
     body?: unknown,
     key?: string,
+    timeoutMs?: number,
+    maxResponseBytes = MAX_RESPONSE_BYTES,
   ): Promise<unknown> {
     const settings = this.config.muirasoft;
     if (
@@ -197,7 +413,10 @@ export class MuiraSoftClient {
       );
     }
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), settings.timeoutMs);
+    const timeout = setTimeout(
+      () => controller.abort(),
+      timeoutMs ?? settings.timeoutMs,
+    );
     try {
       const headers: Record<string, string> = {
         Accept: 'application/json',
@@ -215,7 +434,7 @@ export class MuiraSoftClient {
           redirect: 'error',
         },
       );
-      const text = await this.readBody(response, controller);
+      const text = await this.readBody(response, controller, maxResponseBytes);
       if (!response.ok) throw this.responseError(response);
       if (
         !/^application\/json(?:\s*;|$)/iu.test(
@@ -260,8 +479,9 @@ export class MuiraSoftClient {
   private async readBody(
     response: Response,
     controller: AbortController,
+    maxResponseBytes = MAX_RESPONSE_BYTES,
   ): Promise<string> {
-    if (Number(response.headers.get('content-length')) > MAX_RESPONSE_BYTES) {
+    if (Number(response.headers.get('content-length')) > maxResponseBytes) {
       controller.abort();
       throw new MuiraSoftError(
         'MUIRASOFT_INVALID_RESPONSE',
@@ -278,7 +498,7 @@ export class MuiraSoftClient {
         const { done, value } = await reader.read();
         if (done) break;
         total += value.byteLength;
-        if (total > MAX_RESPONSE_BYTES) {
+        if (total > maxResponseBytes) {
           controller.abort();
           throw new MuiraSoftError(
             'MUIRASOFT_INVALID_RESPONSE',

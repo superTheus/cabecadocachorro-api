@@ -1,3 +1,4 @@
+import { isIP } from 'node:net';
 export interface DatabaseConfig {
   readonly enabled: boolean;
   readonly url?: string;
@@ -28,6 +29,7 @@ export class AppConfig {
     readonly auth: Readonly<{ enabled: boolean; key?: string }> = {
       enabled: false,
     },
+    readonly trustedProxies: readonly string[] = [],
   ) {}
 
   get integrationConfigured(): boolean {
@@ -198,6 +200,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     invalid('AUTH_ENABLED/AUTH_ENCRYPTION_KEY/DATABASE_ENABLED');
   // Observe instruments request bodies; customer secrets must never enter traces.
   if (authEnabled && observeEnabled) invalid('OBSERVE_ENABLED');
+  const trustedProxies = (env.TRUSTED_PROXY_IPS || '')
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+  if (trustedProxies.length > 20 || trustedProxies.some((ip) => !isIP(ip)))
+    invalid('TRUSTED_PROXY_IPS');
 
   return new AppConfig(
     environment as AppConfig['environment'],
@@ -223,5 +231,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       appSecret: env.OBSERVE_APP_SECRET,
     }),
     Object.freeze({ enabled: authEnabled, key: authKey }),
+    Object.freeze(trustedProxies),
   );
 }

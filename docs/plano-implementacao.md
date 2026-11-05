@@ -1,5 +1,7 @@
 # Plano de implementação da loja Cabeça do Cachorro
 
+Estado atual em 03/11/2026: etapas 1–14 implementadas localmente; etapa 15 com validação técnica concluída e homologação empresarial/visual pendentes. As atualizações anteriores abaixo são históricas. Consulte [fiscal e homologação](fiscal-homologacao.md) e o guia canônico no backend MuiraSoft antes de iniciar implantação/piloto da etapa 16.
+
 A Cabeça do Cachorro vende roupas e outros produtos pela loja Vue. O NestJS mantém a conta do comprador e conecta a experiência ao MuiraSoft. O MuiraSoft concentra produtos, estoque, pedidos, pagamentos, e-mails, atendimento e documentos fiscais. Os módulos de pagamentos e e-mails atendem outros lojistas com isolamento por conta e contexto de empresa.
 
 **Preservar o layout da loja é obrigatório em todas as etapas.** Reutilizar a identidade, tipografia, cores, espaçamentos, componentes, animações e responsividade existentes. Cadastro, área do cliente e checkout seguirão esse padrão, com revisão visual em desktop e celular. A etapa 1 não modifica o frontend.
@@ -12,6 +14,7 @@ A Cabeça do Cachorro vende roupas e outros produtos pela loja Vue. O NestJS man
 - Entrega local e retirada.
 - Conta do cliente com cadastro, login, perfil, endereços, histórico e acompanhamento.
 - Asaas configurado pelo lojista no MuiraSoft; cobranças na conta Asaas desse lojista.
+- Cartão em até 3 vezes sem juros. Pagamento tardio sem estoque permanece registrado e segue para revisão, sem estorno automático.
 - MuiraSoft envia os e-mails da loja. Sem configuração personalizada ativa, utiliza o servidor padrão do MuiraSoft.
 - Nota autorizada enviada ao comprador com PDF e XML e disponibilizada com autorização na área do cliente.
 
@@ -48,16 +51,16 @@ O envio fiscal usa o e-mail do comprador registrado no pedido; a configuração 
 
 | Regra | Decisão necessária |
 | --- | --- |
-| Parcelamento | Limite, valor mínimo e juros |
-| Pix e reservas | Validade, liberação e tratamento de pagamento tardio |
-| Pedido misto | Atendimento conjunto ou separado |
+| Parcelamento | Até 3 vezes sem juros; homologar limites do provedor |
+| Pix e reservas | Reserva padrão 30 min configurável, Pix com validade do Asaas; pagamento tardio sem saldo fica pago/em revisão sem estorno automático |
+| Pedido misto | Atendimento conjunto após a encomenda ficar pronta |
 | Encomendas | Prazos e capacidade |
-| Entrega local | Área, taxas, horários e prazos |
-| Retirada | Endereço, horários e instruções |
-| Cancelamento/devolução | Ações automáticas e análise da equipe |
-| Baixa física | Evento que transforma reserva em saída |
-| Notificações | Etapas comerciais que notificam o comprador |
-| Cartão | Checkout próprio com crédito; débito do protótipo precisa de fluxo distinto conforme contrato do Asaas |
+| Entrega local | Faixas de CEP com taxa/prazo por loja; cadastrar valores reais quando a empresa existir |
+| Retirada | Endereço/horários/instruções por loja; cadastro real pendente |
+| Cancelamento/devolução | Regra inicial: análise manual, reposição explicitamente conferida somente para itens com controle e baixa original no MuiraSoft; estorno/fiscal separados |
+| Baixa física | Ao confirmar expedição/retirada, somente itens com controle ativo no ERP |
+| Notificações | Todas as mudanças comerciais, inclusive cancelamento |
+| Cartão | Crédito dentro da loja; homologação com provedor real pendente |
 
 ## Estado da implementação em 29/10/2026
 
@@ -66,3 +69,49 @@ Etapas 1 e 2 concluídas localmente. A etapa 4 foi implementada em 30/10/2026 (c
 ## Recorte da etapa 1
 
 Esta entrega prepara a estrutura; os módulos comerciais acima têm etapas próprias. A API pública da fundação contém somente [liveness e readiness](../contracts/storefront.openapi.json). O [contrato remoto existente](../contracts/muirasoft/integracoes-v1.openapi.json) e suas [lacunas documentadas](integracao-muirasoft.md) distinguem o que já pode ser integrado do que ainda precisa ser implementado no MuiraSoft.
+
+## Atualização em 02/11/2026
+
+Etapa 5 implementada: nome/telefone, CRUD de endereços e padrão único, com sessão, isolamento e concorrência. Veja [perfil e endereços](perfil-enderecos.md). Seleção no checkout aguarda etapa 11. Próxima entrega: etapa 6, catálogo no MuiraSoft. Empresa/conexão e homologação de e-mail continuam pendentes.
+
+## Catálogo no MuiraSoft — 02/11/2026
+
+Etapa 6 implementada localmente: publicação por conexão, metadados, fotos por URLs HTTPS, variações por SKUs existentes, modalidade/prazo. Contrato ERP 1.2 e adaptador atualizados. Ver docs/catalogo-lojas.md no MuiraSoft backend. Próxima entrega: etapa 7, pedidos e estoque. Vitrine real na etapa 10. Empresa/conexão e homologação integrada pendentes.
+
+## Pedidos e estoque — 02/11/2026
+
+Etapa 7 implementada no MuiraSoft: reserva inicial de 30 minutos configurável, apenas para produtos com controle no ERP; baixa em expedição/retirada. Sem controle não há reserva/bloqueio/baixa. Contrato 1.3 e adaptador validados. Não há estoque/reserva próprios no NestJS. Detalhes em docs/pedidos-estoque-loja.md no MuiraSoft backend. Próxima entrega: etapa 8, conexão Asaas.
+
+## Conexão Asaas por lojista — 02/11/2026
+
+Etapa 8 implementada no ERP em módulo próprio, por conta/empresa/ambiente, com cifra dedicada, token de webhook independente, inbox durável e diagnóstico somente leitura. Nenhuma chave de assinatura é reutilizada. A API da loja não recebe segredos Asaas. Ver docs/asaas-lojas.md no backend MuiraSoft. Próxima etapa: 9, pagamentos e financeiro; integração real ainda não homologada.
+
+## Pagamentos e financeiro — 02/11/2026
+
+Etapa 9 implementada localmente: Pix, cartão em até 3 vezes sem juros, tentativas duráveis, consulta por referência, webhook com consulta atual, recebíveis/baixas/taxas no financeiro existente, estorno integral e revisão de exceções. Contrato ERP 1.4.0 e adaptador privado NestJS. Nenhuma rota de pagamento do comprador foi exposta antes do checkout da etapa 11. Ver docs/pagamentos-lojas.md no backend MuiraSoft.
+
+Migrations 042/043 locais aplicadas e registradas. Estoque somente no ERP e para produtos com controle ativo; pagamento não baixa estoque. Falta de estoque após pagamento tardio exige revisão sem estorno automático. Homologação Asaas e revisão visual permanecem pendentes. Próxima etapa: **10 — vitrine e sacola**.
+
+## Vitrine e sacola — 02/11/2026
+
+Etapa 10 implementada localmente: catálogo público projetado, modelos/SKUs, filtros, fotos, modalidades/prazos e sacola persistida com revalidação no ERP. Instagram atual confirmado para atendimento; páginas de informações ligadas ao menu/rodapé. Produtos e descontos de demonstração retirados. Nenhuma reserva ou cobrança no navegador/NestJS. Contrato público 0.3.0; ver [vitrine e sacola](vitrine-sacola.md).
+
+Passaram 117 testes unitários da API, 14 e2e HTTP, seis contratos, 13 testes da loja, builds/tipos/lint. Sem migration nova. Empresa/conexão/publicações reais e revisão visual permanecem pendentes; não afirmar homologação com produtos reais. Próxima implementação: **11 — checkout**, fechando entrega local/retirada e atendimento de pedido misto antes de cobrar.
+
+## Checkout — 02/11/2026
+
+Etapa 11 implementada localmente: conta verificada, endereço próprio, CPF/CNPJ, revisão no ERP, entrega por faixas de CEP ou retirada, atendimento conjunto, confirmação idempotente/reserva e pagamento Pix/cartão. Snapshot preserva frete/endereço; cartão não é persistido ou registrado. Retomada e consulta por comprador, com recuperação por chave sem repetir cobrança. Ver [checkout](checkout.md).
+
+Migration ERP 044 e quarta migration da API aplicadas/registradas. Contratos ERP 1.5.0 e público 0.4.0. Passaram 168 verificações ERP, 124 unitários/14 e2e/seis contratos da API, 28 HTTP/MySQL de checkout, dez de migrations e 16 testes da loja; builds/tipos/lint. Homologação real e revisão visual pendentes. Próxima implementação: **12 — operação no MuiraSoft**.
+
+## Operação no MuiraSoft — 02/11/2026
+
+Etapa 12 implementada localmente no ERP: produção de encomendas, separação, preparo conjunto, expedição/retirada, entrega, conclusão, cancelamento e devoluções com permissões e histórico idempotente. Usuário confirmou exceção administrativa com motivo para operar sem liberação financeira e devolução com análise manual, reposição após conferência e estorno separado. A exceção não altera pagamento nem contorna saldo físico. Somente o MuiraSoft movimenta estoque, apenas para produtos com controle ativo.
+
+Migrations ERP 045/046 aplicadas/registradas. Contratos externos permanecem ERP 1.5.0/público 0.4.0, sem exposição do histórico interno. Passaram 232 verificações integradas ERP, 69 de pedidos e 43 do frontend ERP; build/tipos/lint dos arquivos alterados. Ver docs/operacao-pedidos-loja.md no backend MuiraSoft. Empresa/conexão/Asaas e revisão visual continuam pendentes. Próxima implementação: **13 — área do cliente e acompanhamento**.
+
+## Área do cliente e acompanhamento — 02/11/2026
+
+Etapa 13 implementada localmente: Meus pedidos, paginação por cursor, itens/opções e snapshots, valores/frete, pagamento, prazos, linha do tempo, retomada do checkout/Pix e solicitações manuais de cancelamento/devolução/atendimento. O usuário pediu decisões rotineiras autônomas; as regras conservam análise manual, estorno separado e estoque somente no MuiraSoft para produtos controlados. Atendentes respondem no ERP, separando resposta pública de nota interna. Sem associação de compras por e-mail/documento ou efeitos financeiros/físicos automáticos.
+
+Migration ERP 047 e quinta migration da API aplicadas/registradas. Contratos ERP 1.6.0/público 0.5.0. Passaram 273 verificações ERP, 132 unitários/14 e2e/seis contratos da API, 23 HTTP/MySQL de acompanhamento, 28 de checkout, dez de migrations e 20 testes da loja; frontend ERP com 43 regressões/build/tipos/lint. Ver [área do cliente e pedidos](area-cliente-pedidos.md). Homologação real e revisão visual continuam pendentes. Próxima implementação: **14 — nota fiscal e envio**.

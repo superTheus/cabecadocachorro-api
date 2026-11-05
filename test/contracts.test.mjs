@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 import SwaggerParser from '@apidevtools/swagger-parser';
 
 const root = new URL('../', import.meta.url);
@@ -15,7 +16,7 @@ await test('OpenAPI público e cópia de interoperabilidade passam no validador 
     'contracts/storefront.openapi.json',
     'contracts/muirasoft/integracoes-v1.tooling.openapi.json',
   ]) {
-    await SwaggerParser.validate(new URL(path, root).pathname);
+    await SwaggerParser.validate(fileURLToPath(new URL(path, root)));
   }
 });
 
@@ -57,7 +58,7 @@ await test('contratos são OpenAPI e todas as referências locais resolvem', () 
     references(spec, spec);
   }
 });
-await test('superfície pública não expõe catálogo ou pedidos da conexão do lojista', () => {
+await test('superfície pública expõe vitrine projetada e revalidação sem pedidos da conexão', () => {
   assert.deepEqual(
     Object.keys(publicSpec.paths).sort(),
     [
@@ -71,9 +72,29 @@ await test('superfície pública não expõe catálogo ou pedidos da conexão do
         'change-password',
         'logout',
         'me',
+        'session',
       ].map((name) => '/api/v1/auth/' + name),
+      '/api/v1/auth/profile',
+      '/api/v1/auth/addresses',
+      '/api/v1/auth/addresses/{id}',
+      '/api/v1/auth/addresses/{id}/default',
       '/api/v1/health/live',
       '/api/v1/health/ready',
+      '/api/v1/catalog/products',
+      '/api/v1/catalog/images/{product}/{image}',
+      '/api/v1/catalog/products/{id}',
+      '/api/v1/cart/validate',
+      '/api/v1/checkout/options',
+      '/api/v1/checkout',
+      '/api/v1/checkout/{id}',
+      '/api/v1/checkout/{id}/confirm',
+      '/api/v1/checkout/{id}/payments',
+      '/api/v1/checkout/{id}/payments/{payment}/pix',
+      '/api/v1/orders',
+      '/api/v1/orders/{id}',
+      '/api/v1/orders/{id}/documents/{document}/{format}',
+      '/api/v1/orders/{id}/requests',
+      '/api/v1/orders/{id}/requests/{request}/retry',
     ].sort(),
   );
   assert.ok(publicSpec.paths['/api/v1/health/ready'].get.responses['503']);

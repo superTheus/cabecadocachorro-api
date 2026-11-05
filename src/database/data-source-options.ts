@@ -1,3 +1,6 @@
+import { CustomerProfileAddresses1793642400000 } from './migrations/1793642400000-customer-profile-addresses.js';
+import { CheckoutSessions1793646000000 } from './migrations/1793646000000-checkout-sessions.js';
+import { CustomerOrderRequests1793649600000 } from './migrations/1793649600000-customer-order-requests.js';
 import { CustomerAccounts1793383200000 } from './migrations/1793383200000-customer-accounts.js';
 import { DataSource } from 'typeorm';
 import type { MysqlConnectionOptions } from 'typeorm/driver/mysql/MysqlConnectionOptions.js';
@@ -25,6 +28,9 @@ export function databaseOptions(config: AppConfig): MysqlConnectionOptions {
     migrations: [
       StoreIntegrationFoundation1793296800000,
       CustomerAccounts1793383200000,
+      CustomerProfileAddresses1793642400000,
+      CheckoutSessions1793646000000,
+      CustomerOrderRequests1793649600000,
     ],
     migrationsTableName: 'store_migrations',
     migrationsTransactionMode: 'each',

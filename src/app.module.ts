@@ -1,4 +1,7 @@
 import { AuthModule } from './auth/auth.module.js';
+import { CatalogModule } from './catalog/catalog.module.js';
+import { CheckoutModule } from './checkout/checkout.module.js';
+import { OrdersModule } from './orders/orders.module.js';
 import { DynamicModule, Module } from '@nestjs/common';
 import { AppConfig } from './config/app-config.js';
 import { ConfigModule } from './config/config.module.js';
@@ -13,6 +16,9 @@ export class AppModule {
         ConfigModule.register(config),
         HealthModule,
         AuthModule,
+        CatalogModule,
+        CheckoutModule,
+        OrdersModule,
         ...(observe ? [observe] : []),
       ],
     };

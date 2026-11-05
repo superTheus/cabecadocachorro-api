@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "MuiraSoft Integração de Lojas",
-    "version": "1.1.0",
-    "description": "API de servidor para lojas externas. Credenciais são gerenciadas em Configurações → Integrações. Estoque sem reserva; operações não criam recebimentos nem cancelam notas fiscais. Retry mantém o status e corpo originais; chave com outro conteúdo retorna 409."
+    "title": "MuiraSoft API",
+    "version": "1.9.0",
+    "description": "API do MuiraSoft para aplicações externas: catálogos web, aplicativos, relatórios, sistemas internos e lojas. O MuiraSoft emite tokens com permissões por aplicação e empresa. Asaas e checkout são opcionais. Consultar produtos não exige operação de venda, publicação, carteira ou provedor. Novas aplicações usam origem API e consulta geral por padrão; conexões existentes preservam sua seleção de produtos. Somente ações efetivamente concedidas e implementadas ficam disponíveis. Estoque exclusivamente no MuiraSoft e somente em produtos controlados. Pedidos, pagamento, saída física e fiscal permanecem separados."
   },
   "servers": [
     {
@@ -87,6 +87,14 @@
             "type": "string",
             "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
             "example": "50.00"
+          },
+          "modalidade": {
+            "type": "string",
+            "enum": [
+              "PRONTA_ENTREGA",
+              "ENCOMENDA"
+            ],
+            "description": "Obrigatória para publicação MISTA. Na publicação com modalidade única, pode ser omitida."
           }
         },
         "required": [
@@ -302,7 +310,8 @@
           "estoque_politica": {
             "type": "string",
             "enum": [
-              "SEM_MOVIMENTO"
+              "SEM_MOVIMENTO",
+              "RESERVA"
             ]
           }
         },
@@ -380,7 +389,8 @@
           "estoque_politica": {
             "type": "string",
             "enum": [
-              "SEM_MOVIMENTO"
+              "SEM_MOVIMENTO",
+              "RESERVA"
             ]
           },
           "cliente": {
@@ -488,6 +498,26 @@
                 "observacao"
               ]
             }
+          },
+          "reservas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservaPedido"
+            }
+          },
+          "estoque_saida_em": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "entrega_tipo": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "EXPEDICAO",
+              "RETIRADA",
+              null
+            ]
           }
         },
         "required": [
@@ -543,23 +573,25 @@
               },
               "fisico": {
                 "type": "string",
-                "nullable": true
+                "nullable": true,
+                "description": "Saldo no ERP; null quando controle desmarcado."
               },
               "politica": {
                 "type": "string",
                 "enum": [
-                  "SEM_MOVIMENTO"
+                  "SEM_MOVIMENTO",
+                  "RESERVA"
                 ]
               },
               "reservado": {
                 "type": "string",
                 "nullable": true,
-                "description": "Sempre null nesta versão; não há reserva."
+                "description": "Soma de reservas vigentes exclusivamente no ERP; null se controle desmarcado ou regime legado."
               },
               "disponivel_para_venda": {
                 "type": "string",
                 "nullable": true,
-                "description": "Sempre null nesta versão; saldo físico não é promessa de atendimento."
+                "description": "Físico menos reservas vigentes no MuiraSoft. Consulta não garante atendimento; criação revalida com lock. null sem controle."
               },
               "consultado_em": {
                 "type": "string",
@@ -578,6 +610,98 @@
               "disponivel_para_venda",
               "consultado_em"
             ]
+          },
+          "loja": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "titulo",
+              "descricao",
+              "categoria",
+              "cor",
+              "tamanho",
+              "imagens",
+              "grupo_variacao",
+              "modalidade",
+              "prazo_dias"
+            ],
+            "properties": {
+              "titulo": {
+                "type": "string",
+                "maxLength": 150
+              },
+              "descricao": {
+                "type": "string",
+                "maxLength": 10000
+              },
+              "categoria": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "cor": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "tamanho": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "imagens": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 8,
+                "items": {
+                  "type": "string",
+                  "format": "uri",
+                  "pattern": "^https://",
+                  "maxLength": 2048
+                }
+              },
+              "grupo_variacao": {
+                "type": "string",
+                "nullable": true,
+                "maxLength": 80
+              },
+              "modalidade": {
+                "type": "string",
+                "enum": [
+                  "PRONTA_ENTREGA",
+                  "ENCOMENDA",
+                  "MISTA"
+                ]
+              },
+              "prazo_dias": {
+                "type": "integer",
+                "nullable": true,
+                "minimum": 1,
+                "maximum": 365,
+                "description": "Produção em dias corridos; nulo para pronta entrega. Não inclui transporte."
+              }
+            },
+            "nullable": true,
+            "description": "Metadados opcionais de apresentação. Null quando não há publicação para esta aplicação. Nome legado loja preservado por compatibilidade."
+          },
+          "categoria": {
+            "type": "string",
+            "nullable": true,
+            "description": "Categoria do cadastro do produto."
+          },
+          "imagens": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "required": [
+                "id"
+              ],
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "description": "Imagens do cadastro, em ordem. Conteúdo disponível pela API autenticada."
           }
         },
         "required": [
@@ -647,6 +771,57 @@
             "type": "string",
             "pattern": "^\\d{1,13}(?:\\.\\d{1,2})?$",
             "example": "50.00"
+          },
+          "modalidade": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "PRONTA_ENTREGA",
+              "ENCOMENDA",
+              null
+            ]
+          },
+          "prazo_producao_dias": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 365
+          },
+          "loja_snapshot": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": false,
+            "properties": {
+              "titulo": {
+                "type": "string"
+              },
+              "descricao": {
+                "type": "string"
+              },
+              "categoria": {
+                "type": "string"
+              },
+              "imagens": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 8
+              },
+              "grupo_variacao": {
+                "type": "string",
+                "nullable": true
+              },
+              "cor": {
+                "type": "string"
+              },
+              "tamanho": {
+                "type": "string"
+              },
+              "controla_estoque": {
+                "type": "boolean"
+              }
+            }
           }
         },
         "required": [
@@ -654,6 +829,1666 @@
           "quantidade",
           "preco"
         ]
+      },
+      "PublicacaoProduto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "titulo",
+          "descricao",
+          "categoria",
+          "cor",
+          "tamanho",
+          "imagens",
+          "grupo_variacao",
+          "modalidade",
+          "prazo_dias"
+        ],
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "descricao": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "categoria": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "cor": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "tamanho": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "imagens": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "format": "uri",
+              "pattern": "^https://",
+              "maxLength": 2048
+            }
+          },
+          "grupo_variacao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 80
+          },
+          "modalidade": {
+            "type": "string",
+            "enum": [
+              "PRONTA_ENTREGA",
+              "ENCOMENDA",
+              "MISTA"
+            ]
+          },
+          "prazo_dias": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "maximum": 365,
+            "description": "Produção em dias corridos; nulo para pronta entrega. Não inclui transporte."
+          }
+        }
+      },
+      "ReservaPedido": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id_item",
+          "quantidade",
+          "estado",
+          "expira_em"
+        ],
+        "properties": {
+          "id_item": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "quantidade": {
+            "type": "string"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "ATIVA",
+              "GARANTIDA",
+              "CONSUMIDA",
+              "LIBERADA",
+              "EXPIRADA",
+              "SEM_CONTROLE"
+            ]
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "LojaParcela": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "numero": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "valor": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "liquido": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "estornado": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "status_asaas": {
+            "type": "string"
+          },
+          "confirmado": {
+            "type": "string",
+            "enum": [
+              "S",
+              "N"
+            ]
+          },
+          "disponivel": {
+            "type": "string",
+            "enum": [
+              "S",
+              "N"
+            ]
+          },
+          "vencimento": {
+            "type": "string",
+            "format": "date"
+          },
+          "credito_em": {
+            "type": "string",
+            "format": "date",
+            "nullable": true
+          }
+        },
+        "required": [
+          "numero",
+          "valor",
+          "liquido",
+          "estornado",
+          "status_asaas",
+          "confirmado",
+          "disponivel",
+          "vencimento",
+          "credito_em"
+        ]
+      },
+      "LojaPagamento": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "id_pedido": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "metodo": {
+            "type": "string",
+            "enum": [
+              "PIX",
+              "CREDIT_CARD"
+            ]
+          },
+          "parcelas": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "estado": {
+            "type": "string",
+            "enum": [
+              "EM_ENVIO",
+              "INCERTO",
+              "CRIADO",
+              "RECUSADO",
+              "REVISAO"
+            ]
+          },
+          "pago_em": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "revisao_estoque": {
+            "type": "boolean"
+          },
+          "erro_codigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "financeiro_codigo": {
+            "type": "string",
+            "nullable": true
+          },
+          "estorno_estado": {
+            "type": "string",
+            "nullable": true
+          },
+          "total_estornado": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "liquido_recebido_acumulado": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$",
+            "description": "Acumulado recebido; não é o saldo atual da carteira. Estornos e outros movimentos são separados."
+          },
+          "cobrancas": {
+            "type": "array",
+            "maxItems": 3,
+            "items": {
+              "$ref": "#/components/schemas/LojaParcela"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "id_pedido",
+          "metodo",
+          "parcelas",
+          "total",
+          "estado",
+          "pago_em",
+          "revisao_estoque",
+          "erro_codigo",
+          "financeiro_codigo",
+          "estorno_estado",
+          "total_estornado",
+          "liquido_recebido_acumulado",
+          "cobrancas"
+        ]
+      },
+      "CriarPagamentoLoja": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metodo": {
+                "type": "string",
+                "enum": [
+                  "PIX"
+                ]
+              },
+              "parcelas": {
+                "type": "integer",
+                "enum": [
+                  1
+                ]
+              }
+            },
+            "required": [
+              "metodo"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metodo": {
+                "type": "string",
+                "enum": [
+                  "CREDIT_CARD"
+                ]
+              },
+              "parcelas": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 3,
+                "default": 1
+              },
+              "ip_comprador": {
+                "type": "string",
+                "description": "IP real derivado pelo servidor da loja, respeitando proxies confiáveis."
+              },
+              "cartao": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "holderName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "number": {
+                    "type": "string",
+                    "pattern": "^\\d{13,19}$",
+                    "writeOnly": true
+                  },
+                  "expiryMonth": {
+                    "type": "string",
+                    "pattern": "^(0[1-9]|1[0-2])$"
+                  },
+                  "expiryYear": {
+                    "type": "string",
+                    "pattern": "^20\\d{2}$"
+                  },
+                  "ccv": {
+                    "type": "string",
+                    "pattern": "^\\d{3,4}$",
+                    "writeOnly": true
+                  }
+                },
+                "required": [
+                  "holderName",
+                  "number",
+                  "expiryMonth",
+                  "expiryYear",
+                  "ccv"
+                ]
+              }
+            },
+            "required": [
+              "metodo",
+              "ip_comprador",
+              "cartao"
+            ]
+          }
+        ]
+      },
+      "PixLoja": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "imagem_base64": {
+            "type": "string",
+            "maxLength": 100000,
+            "description": "PNG em Base64, validado e limitado."
+          },
+          "copia_cola": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "expira_em": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Prazo retornado pelo Asaas, separado da reserva de estoque."
+          }
+        },
+        "required": [
+          "imagem_base64",
+          "copia_cola",
+          "expira_em"
+        ]
+      },
+      "ListaPagamentosLoja": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "$ref": "#/components/schemas/LojaPagamento"
+            }
+          }
+        },
+        "required": [
+          "data"
+        ]
+      },
+      "CheckoutAddress": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "recipient": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "postal_code": {
+            "type": "string",
+            "maxLength": 8
+          },
+          "street": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "number": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "complement": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "district": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "city": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "state": {
+            "type": "string",
+            "maxLength": 2
+          }
+        },
+        "required": [
+          "recipient",
+          "postal_code",
+          "street",
+          "number",
+          "complement",
+          "district",
+          "city",
+          "state"
+        ]
+      },
+      "CheckoutDelivery": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ENTREGA",
+              "RETIRADA"
+            ]
+          },
+          "nome": {
+            "type": "string"
+          },
+          "taxa": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "prazo_dias": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "endereco": {
+            "type": "string",
+            "nullable": true
+          },
+          "instrucoes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "tipo",
+          "nome",
+          "taxa",
+          "prazo_dias",
+          "endereco",
+          "instrucoes"
+        ]
+      },
+      "CheckoutItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "sku_id": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "titulo": {
+            "type": "string"
+          },
+          "cor": {
+            "type": "string"
+          },
+          "tamanho": {
+            "type": "string"
+          },
+          "imagem": {
+            "type": "string",
+            "format": "uri",
+            "nullable": true
+          },
+          "quantidade": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 99
+          },
+          "preco": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "modalidade": {
+            "type": "string",
+            "enum": [
+              "PRONTA_ENTREGA",
+              "ENCOMENDA"
+            ]
+          },
+          "prazo_producao_dias": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "sku_id",
+          "titulo",
+          "cor",
+          "tamanho",
+          "imagem",
+          "quantidade",
+          "preco",
+          "total",
+          "modalidade",
+          "prazo_producao_dias"
+        ]
+      },
+      "CheckoutReview": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cliente": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "nome": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "documento_final": {
+                "type": "string",
+                "maxLength": 4
+              }
+            },
+            "required": [
+              "nome",
+              "email",
+              "documento_final"
+            ]
+          },
+          "endereco": {
+            "$ref": "#/components/schemas/CheckoutAddress"
+          },
+          "entrega": {
+            "$ref": "#/components/schemas/CheckoutDelivery"
+          },
+          "itens": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckoutItem"
+            },
+            "minItems": 1,
+            "maxItems": 30
+          },
+          "subtotal": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "frete": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,12}\\.\\d{2}$"
+          },
+          "prazo_producao_dias": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "atendimento_conjunto": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "cliente",
+          "endereco",
+          "entrega",
+          "itens",
+          "subtotal",
+          "frete",
+          "total",
+          "prazo_producao_dias",
+          "atendimento_conjunto"
+        ]
+      },
+      "CheckoutOptions": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "versao": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "atendimento_conjunto": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "opcoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CheckoutDelivery"
+            },
+            "maxItems": 2
+          }
+        },
+        "required": [
+          "versao",
+          "atendimento_conjunto",
+          "opcoes"
+        ]
+      },
+      "CheckoutQuote": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "expira_em": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id_pedido": {
+            "type": "integer",
+            "nullable": true
+          },
+          "numero_pedido": {
+            "type": "string",
+            "nullable": true
+          },
+          "revisao": {
+            "$ref": "#/components/schemas/CheckoutReview"
+          }
+        },
+        "required": [
+          "id",
+          "expira_em",
+          "id_pedido",
+          "numero_pedido",
+          "revisao"
+        ]
+      },
+      "CheckoutQuoteInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cliente": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "referencia_externa": {
+                "type": "string",
+                "maxLength": 191
+              },
+              "nome": {
+                "type": "string",
+                "maxLength": 100
+              },
+              "email": {
+                "type": "string",
+                "maxLength": 100,
+                "format": "email"
+              },
+              "documento": {
+                "type": "string",
+                "pattern": "^\\d{11}$|^\\d{14}$",
+                "writeOnly": true
+              },
+              "telefone": {
+                "type": "string",
+                "maxLength": 25
+              }
+            },
+            "required": [
+              "referencia_externa",
+              "nome",
+              "email",
+              "documento",
+              "telefone"
+            ]
+          },
+          "endereco": {
+            "$ref": "#/components/schemas/CheckoutAddress"
+          },
+          "tipo_entrega": {
+            "type": "string",
+            "enum": [
+              "ENTREGA",
+              "RETIRADA"
+            ]
+          },
+          "itens": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 30,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id_produto": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "quantidade": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 99
+                },
+                "modalidade": {
+                  "type": "string",
+                  "enum": [
+                    "PRONTA_ENTREGA",
+                    "ENCOMENDA"
+                  ]
+                }
+              },
+              "required": [
+                "id_produto",
+                "quantidade",
+                "modalidade"
+              ]
+            }
+          }
+        },
+        "required": [
+          "cliente",
+          "endereco",
+          "tipo_entrega",
+          "itens"
+        ]
+      },
+      "TrackingSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "number",
+          "created_at",
+          "updated_at",
+          "canceled_at",
+          "status",
+          "status_label",
+          "commercial_status",
+          "total",
+          "item_count",
+          "production_days"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999999999
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canceled_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDENTE",
+              "PRODUCAO",
+              "SEPARACAO",
+              "PRONTO",
+              "EXPEDIDO",
+              "RETIRADO",
+              "ENTREGUE",
+              "CONCLUIDO",
+              "CANCELADO"
+            ]
+          },
+          "status_label": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "commercial_status": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,13}\\.\\d{2}$"
+          },
+          "item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "production_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          }
+        }
+      },
+      "TrackingPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "next_cursor",
+          "synced_at"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "number",
+                "created_at",
+                "updated_at",
+                "canceled_at",
+                "status",
+                "status_label",
+                "commercial_status",
+                "total",
+                "item_count",
+                "production_days"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 999999999
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "canceled_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDENTE",
+                    "PRODUCAO",
+                    "SEPARACAO",
+                    "PRONTO",
+                    "EXPEDIDO",
+                    "RETIRADO",
+                    "ENTREGUE",
+                    "CONCLUIDO",
+                    "CANCELADO"
+                  ]
+                },
+                "status_label": {
+                  "type": "string",
+                  "maxLength": 150
+                },
+                "commercial_status": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "total": {
+                  "type": "string",
+                  "pattern": "^\\d{1,13}\\.\\d{2}$"
+                },
+                "item_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 500
+                },
+                "production_days": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 365
+                }
+              }
+            },
+            "maxItems": 50
+          },
+          "next_cursor": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "nullable": true
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TrackingRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "message",
+          "items",
+          "status",
+          "created_at",
+          "updated_at",
+          "responses"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CANCELLATION",
+              "RETURN",
+              "SUPPORT"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "quantity"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^item_[1-9]\\d{0,18}$"
+                },
+                "quantity": {
+                  "type": "string",
+                  "pattern": "^\\d{1,14}\\.\\d{4}$"
+                }
+              }
+            },
+            "maxItems": 30
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "IN_REVIEW",
+              "ANSWERED",
+              "CLOSED"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "responses": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status",
+                "message",
+                "created_at"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "IN_REVIEW",
+                    "ANSWERED",
+                    "CLOSED"
+                  ]
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            "maxItems": 100
+          }
+        }
+      },
+      "TrackingRequestInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "message"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "CANCELLATION",
+              "RETURN",
+              "SUPPORT"
+            ]
+          },
+          "message": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "quantity"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^item_[1-9]\\d{0,18}$"
+                },
+                "quantity": {
+                  "type": "string",
+                  "pattern": "^\\d{1,14}(\\.\\d{1,4})?$"
+                }
+              }
+            },
+            "maxItems": 30
+          }
+        }
+      },
+      "TrackingOrder": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "number",
+          "created_at",
+          "updated_at",
+          "canceled_at",
+          "status",
+          "status_label",
+          "commercial_status",
+          "total",
+          "item_count",
+          "production_days",
+          "subtotal",
+          "freight",
+          "items",
+          "delivery",
+          "payments",
+          "timeline",
+          "requests",
+          "can_request_cancellation",
+          "can_request_return",
+          "synced_at",
+          "checkout_reference",
+          "documents"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "number": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 999999999
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "canceled_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDENTE",
+              "PRODUCAO",
+              "SEPARACAO",
+              "PRONTO",
+              "EXPEDIDO",
+              "RETIRADO",
+              "ENTREGUE",
+              "CONCLUIDO",
+              "CANCELADO"
+            ]
+          },
+          "status_label": {
+            "type": "string",
+            "maxLength": 150
+          },
+          "commercial_status": {
+            "type": "string",
+            "maxLength": 100
+          },
+          "total": {
+            "type": "string",
+            "pattern": "^\\d{1,13}\\.\\d{2}$"
+          },
+          "item_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 500
+          },
+          "production_days": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "subtotal": {
+            "type": "string",
+            "pattern": "^\\d{1,13}\\.\\d{2}$"
+          },
+          "freight": {
+            "type": "string",
+            "pattern": "^\\d{1,13}\\.\\d{2}$"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "color",
+                "size",
+                "image",
+                "quantity",
+                "unit_price",
+                "total",
+                "fulfillment",
+                "production_days"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^item_[1-9]\\d{0,18}$"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                "color": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "size": {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                "image": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "format": "uri",
+                  "nullable": true
+                },
+                "quantity": {
+                  "type": "string",
+                  "pattern": "^\\d{1,14}\\.\\d{4}$"
+                },
+                "unit_price": {
+                  "type": "string",
+                  "pattern": "^\\d{1,13}\\.\\d{2}$"
+                },
+                "total": {
+                  "type": "string",
+                  "pattern": "^\\d{1,13}\\.\\d{2}$"
+                },
+                "fulfillment": {
+                  "type": "string",
+                  "enum": [
+                    "PRONTA_ENTREGA",
+                    "ENCOMENDA"
+                  ],
+                  "nullable": true
+                },
+                "production_days": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 365,
+                  "nullable": true
+                }
+              }
+            },
+            "maxItems": 500
+          },
+          "delivery": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "name",
+              "lead_days",
+              "pickup_address",
+              "instructions",
+              "address",
+              "together"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "ENTREGA",
+                  "RETIRADA"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 150
+              },
+              "lead_days": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 365
+              },
+              "pickup_address": {
+                "type": "string",
+                "maxLength": 1000,
+                "nullable": true
+              },
+              "instructions": {
+                "type": "string",
+                "maxLength": 1000,
+                "nullable": true
+              },
+              "address": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "recipient",
+                  "postal_code",
+                  "street",
+                  "number",
+                  "complement",
+                  "district",
+                  "city",
+                  "state"
+                ],
+                "properties": {
+                  "recipient": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "postal_code": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "street": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "number": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "complement": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "district": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "city": {
+                    "type": "string",
+                    "maxLength": 200
+                  },
+                  "state": {
+                    "type": "string",
+                    "maxLength": 200
+                  }
+                },
+                "nullable": true
+              },
+              "together": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "nullable": true
+          },
+          "payments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "method",
+                "installments",
+                "total",
+                "status",
+                "paid_at",
+                "refunded_total",
+                "pix_available"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^payment_[1-9]\\d{0,18}$"
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "PIX",
+                    "CREDIT_CARD"
+                  ]
+                },
+                "installments": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 3
+                },
+                "total": {
+                  "type": "string",
+                  "pattern": "^\\d{1,13}\\.\\d{2}$"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PROCESSING",
+                    "REVIEW",
+                    "DECLINED",
+                    "PAID",
+                    "PAID_REVIEW",
+                    "AWAITING_PAYMENT",
+                    "REFUNDED",
+                    "PARTIALLY_REFUNDED"
+                  ]
+                },
+                "paid_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "nullable": true
+                },
+                "refunded_total": {
+                  "type": "string",
+                  "pattern": "^\\d{1,13}\\.\\d{2}$"
+                },
+                "pix_available": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "maxItems": 100
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "kind",
+                "label",
+                "at"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 50
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COMMERCIAL",
+                    "FULFILLMENT",
+                    "PAYMENT"
+                  ]
+                },
+                "label": {
+                  "type": "string",
+                  "maxLength": 150
+                },
+                "at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            },
+            "maxItems": 2000
+          },
+          "requests": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "type",
+                "message",
+                "items",
+                "status",
+                "created_at",
+                "updated_at",
+                "responses"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{32}$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "CANCELLATION",
+                    "RETURN",
+                    "SUPPORT"
+                  ]
+                },
+                "message": {
+                  "type": "string",
+                  "maxLength": 1000
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "id",
+                      "quantity"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^item_[1-9]\\d{0,18}$"
+                      },
+                      "quantity": {
+                        "type": "string",
+                        "pattern": "^\\d{1,14}\\.\\d{4}$"
+                      }
+                    }
+                  },
+                  "maxItems": 30
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "IN_REVIEW",
+                    "ANSWERED",
+                    "CLOSED"
+                  ]
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updated_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "responses": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "status",
+                      "message",
+                      "created_at"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "OPEN",
+                          "IN_REVIEW",
+                          "ANSWERED",
+                          "CLOSED"
+                        ]
+                      },
+                      "message": {
+                        "type": "string",
+                        "maxLength": 1000
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    }
+                  },
+                  "maxItems": 100
+                }
+              }
+            },
+            "maxItems": 20
+          },
+          "can_request_cancellation": {
+            "type": "boolean"
+          },
+          "can_request_return": {
+            "type": "boolean"
+          },
+          "synced_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkout_reference": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$",
+            "nullable": true
+          },
+          "documents": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/FiscalDocument"
+            }
+          }
+        }
+      },
+      "TrackingAccepted": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "accepted"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "accepted": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        }
+      },
+      "FiscalDocument": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "model",
+          "number",
+          "series",
+          "status",
+          "environment",
+          "authorized_at",
+          "downloadable"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{32}$"
+          },
+          "model": {
+            "type": "integer",
+            "enum": [
+              55,
+              65
+            ]
+          },
+          "number": {
+            "type": "string",
+            "pattern": "^\\d{0,20}$"
+          },
+          "series": {
+            "type": "string",
+            "pattern": "^\\d{0,10}$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "AUTORIZADO",
+              "CANCELADO",
+              "REJEITADO",
+              "DENEGADO",
+              "PROCESSANDO",
+              "AGUARDANDO_CONSULTA",
+              "PENDENTE"
+            ]
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "HOMOLOGACAO",
+              "PRODUCAO"
+            ]
+          },
+          "authorized_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "downloadable": {
+            "type": "boolean"
+          }
+        }
       }
     }
   },
@@ -694,8 +2529,17 @@
                     "estoque_politica": {
                       "type": "string",
                       "enum": [
-                        "SEM_MOVIMENTO"
+                        "SEM_MOVIMENTO",
+                        "RESERVA"
                       ]
+                    },
+                    "catalogo_publicado": {
+                      "type": "string",
+                      "enum": [
+                        "S",
+                        "N"
+                      ],
+                      "description": "S limita consultas aos produtos selecionados. N consulta produtos ativos cadastrados na empresa. Não habilita checkout ou pagamentos."
                     }
                   }
                 }
@@ -798,7 +2642,7 @@
     "/produtos": {
       "get": {
         "summary": "Listar produtos e estoques",
-        "description": "Escopo: produtos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "description": "Escopo produtos:ler. Consulta geral: produtos ativos da conta com cadastro na empresa, sem exigir preço positivo ou seleção para publicação. Com catalogo_publicado=S: somente selecionados e com preço positivo. Sem custos ou dados privados. Não exige Asaas ou checkout.",
         "parameters": [
           {
             "name": "busca",
@@ -957,7 +2801,7 @@
     "/produtos/{id}": {
       "get": {
         "summary": "Consultar produto",
-        "description": "Escopo: produtos:ler. Contexto da conta, empresa e canal vem da credencial.",
+        "description": "Escopo produtos:ler. Consulta geral: produtos ativos da conta com cadastro na empresa, sem exigir preço positivo ou seleção para publicação. Com catalogo_publicado=S: somente selecionados e com preço positivo. Sem custos ou dados privados. Não exige Asaas ou checkout.",
         "parameters": [
           {
             "name": "id",
@@ -1076,7 +2920,7 @@
     "/pedidos": {
       "post": {
         "summary": "Criar pedido de forma idempotente",
-        "description": "Escopo: pedidos:criar. Contexto da conta, empresa e canal vem da credencial.",
+        "description": "Escopo: pedidos:criar. Contexto da conta, empresa e canal vem da credencial. Revalida publicação, modalidade e preço; persiste snapshot por item. Pronta entrega reserva somente se produto controla estoque. Encomendas não reservam antes da produção; itens mistos exigem escolha. Falta de saldo ou preço alterado retorna 409 sem persistência parcial.",
         "parameters": [
           {
             "name": "Idempotency-Key",
@@ -1781,6 +3625,1345 @@
           },
           "503": {
             "description": "Domínio ou fila indisponível"
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/pagamentos": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Consultar tentativas do pedido",
+        "description": "Escopo pagamentos:ler. Somente pedidos desta conexão.",
+        "responses": {
+          "200": {
+            "description": "Sucesso; conferir estado, pendências e parcelas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaPagamentosLoja"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "chave",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,100}$",
+              "minLength": 16,
+              "maxLength": 100
+            },
+            "description": "Consulta exata por chave da tentativa para recuperação de resposta perdida."
+          }
+        ]
+      },
+      "post": {
+        "summary": "Criar tentativa de pagamento",
+        "description": "Escopo pagamentos:criar, concedido explicitamente. Total vem do ERP. 202 registra resultado/intenção, não significa pagamento. Dados do cartão somente na memória e no envio HTTPS ao Asaas; nunca registrar corpos. Uma cobrança ativa/incerta bloqueia nova chave. Mesma chave consulta a tentativa, sem reenviar cartão. Cartão usa prazo de comunicação de até 180 segundos no adaptador.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,100}$",
+              "minLength": 16,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CriarPagamentoLoja"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Sucesso; conferir estado, pendências e parcelas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LojaPagamento"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/pedidos/{id}/pagamentos/{pagamento}/pix": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        {
+          "name": "pagamento",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      ],
+      "get": {
+        "summary": "Obter QR Code Pix",
+        "description": "Escopo pagamentos:ler. Expiração do QR é do Asaas e não equivale ao prazo da reserva.",
+        "responses": {
+          "200": {
+            "description": "Sucesso; conferir estado, pendências e parcelas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PixLoja"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/opcoes": {
+      "get": {
+        "summary": "Opções para CEP",
+        "description": "Escopo checkout:ler. Valores e prazos configurados nesta conexão.",
+        "parameters": [
+          {
+            "name": "cep",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{8}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operação concluída; confirmar pedido não confirma pagamento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/cotacoes": {
+      "post": {
+        "summary": "Revisão imutável do checkout",
+        "description": "Escopo checkout:criar, com produtos:ler e checkout:ler para o fluxo completo. Preço e entrega calculados no ERP; cinco minutos de validade. Sem reserva nesta operação. Referência do comprador deriva da conta verificada na API da loja.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{16,100}$",
+              "minLength": 16,
+              "maxLength": 100
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutQuoteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operação concluída; confirmar pedido não confirma pagamento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutQuote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/cotacoes/{id}": {
+      "get": {
+        "summary": "Consultar revisão e vínculo de pedido",
+        "description": "Escopo checkout:ler; conexão e referência do comprador precisam corresponder.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "referencia_comprador",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 191
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operação concluída; confirmar pedido não confirma pagamento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutQuote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/checkout/cotacoes/{id}/confirmar": {
+      "post": {
+        "summary": "Confirmar revisão e reservar pedido uma única vez",
+        "description": "Escopos checkout:criar e pedidos:criar. Revalida preços, publicação, estoque e versão das condições de entrega. Mesmo ID devolve o pedido já confirmado, sem renovação da reserva ou cobrança. Referência externa checkout-ID fixa. Frete e endereço ficam no snapshot.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "referencia_comprador": {
+                    "type": "string",
+                    "maxLength": 191
+                  }
+                },
+                "required": [
+                  "referencia_comprador"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operação concluída; confirmar pedido não confirma pagamento.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutQuote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Erro estruturado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/compradores/pedidos": {
+      "get": {
+        "operationId": "listarPedidosComprador",
+        "description": "Exige pedidos:ler. Referência estável do comprador e contexto da conexão, sem associação por e-mail/documento.",
+        "parameters": [
+          {
+            "name": "referencia_comprador",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 191,
+              "minLength": 1
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resposta do comprador autenticado, sem observações internas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ou credencial inválida."
+          },
+          "403": {
+            "description": "Origem ou permissão indisponível."
+          },
+          "404": {
+            "description": "Recurso não pertence ao comprador neste contexto."
+          },
+          "409": {
+            "description": "Situação ou chave incompatível."
+          },
+          "422": {
+            "description": "Dados inválidos."
+          },
+          "429": {
+            "description": "Limite de consultas."
+          },
+          "502": {
+            "description": "Resposta remota incompatível ou indisponível; retomar consulta."
+          },
+          "503": {
+            "description": "Integração indisponível; não significa histórico vazio."
+          }
+        }
+      }
+    },
+    "/compradores/pedidos/{id}": {
+      "get": {
+        "operationId": "acompanharPedidoComprador",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "referencia_comprador",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 191,
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resposta do comprador autenticado, sem observações internas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingOrder"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ou credencial inválida."
+          },
+          "403": {
+            "description": "Origem ou permissão indisponível."
+          },
+          "404": {
+            "description": "Recurso não pertence ao comprador neste contexto."
+          },
+          "409": {
+            "description": "Situação ou chave incompatível."
+          },
+          "422": {
+            "description": "Dados inválidos."
+          },
+          "429": {
+            "description": "Limite de consultas."
+          },
+          "502": {
+            "description": "Resposta remota incompatível ou indisponível; retomar consulta."
+          },
+          "503": {
+            "description": "Integração indisponível; não significa histórico vazio."
+          }
+        }
+      }
+    },
+    "/compradores/pedidos/{id}/solicitacoes": {
+      "post": {
+        "operationId": "solicitarAtendimentoComprador",
+        "description": "Exige pedidos:ler e pedidos:criar. Solicitação manual sem cancelamento, estorno ou recebimento físico automático.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{16,100}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "referencia_comprador",
+                  "type",
+                  "message"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "CANCELLATION",
+                      "RETURN",
+                      "SUPPORT"
+                    ]
+                  },
+                  "message": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "minLength": 1
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "id",
+                        "quantity"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "pattern": "^item_[1-9]\\d{0,18}$"
+                        },
+                        "quantity": {
+                          "type": "string",
+                          "pattern": "^\\d{1,14}(\\.\\d{1,4})?$"
+                        }
+                      }
+                    },
+                    "maxItems": 30
+                  },
+                  "referencia_comprador": {
+                    "type": "string",
+                    "maxLength": 191,
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resposta do comprador autenticado, sem observações internas.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrackingAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ou credencial inválida."
+          },
+          "403": {
+            "description": "Origem ou permissão indisponível."
+          },
+          "404": {
+            "description": "Recurso não pertence ao comprador neste contexto."
+          },
+          "409": {
+            "description": "Situação ou chave incompatível."
+          },
+          "422": {
+            "description": "Dados inválidos."
+          },
+          "429": {
+            "description": "Limite de consultas."
+          },
+          "502": {
+            "description": "Resposta remota incompatível ou indisponível; retomar consulta."
+          },
+          "503": {
+            "description": "Integração indisponível; não significa histórico vazio."
+          }
+        }
+      }
+    },
+    "/compradores/pedidos/{id}/documentos/{documento}/{formato}": {
+      "get": {
+        "operationId": "arquivoFiscalComprador",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "documento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{32}$"
+            }
+          },
+          {
+            "name": "formato",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "xml"
+              ]
+            }
+          },
+          {
+            "name": "referencia_comprador",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "maxLength": 191,
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Arquivo original validado, sem URL pública.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "filename",
+                    "mime",
+                    "content_base64",
+                    "sha256"
+                  ],
+                  "properties": {
+                    "filename": {
+                      "type": "string",
+                      "pattern": "^nota-fiscal-[a-f0-9]{32}\\.(pdf|xml)$"
+                    },
+                    "mime": {
+                      "type": "string",
+                      "enum": [
+                        "application/pdf",
+                        "application/xml"
+                      ]
+                    },
+                    "content_base64": {
+                      "type": "string",
+                      "format": "byte",
+                      "maxLength": 5592408
+                    },
+                    "sha256": {
+                      "type": "string",
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sessão ou credencial inválida."
+          },
+          "403": {
+            "description": "Origem ou permissão indisponível."
+          },
+          "404": {
+            "description": "Recurso não pertence ao comprador neste contexto."
+          },
+          "409": {
+            "description": "Situação ou chave incompatível."
+          },
+          "422": {
+            "description": "Dados inválidos."
+          },
+          "429": {
+            "description": "Limite de consultas."
+          },
+          "502": {
+            "description": "Resposta remota incompatível ou indisponível; retomar consulta."
+          },
+          "503": {
+            "description": "Integração indisponível; não significa histórico vazio."
+          }
+        },
+        "summary": "Obter arquivo fiscal autorizado do próprio pedido",
+        "description": "Escopo pedidos:ler. Vínculo por conta, empresa, conexão e comprador. Revalida autorização e arquivos a cada leitura. PDF até 4 MiB; XML até 2 MiB. Resposta JSON limitada a 6 MiB."
+      }
+    },
+    "/produtos/{id}/imagens/{imagem}": {
+      "get": {
+        "operationId": "consultarImagemProduto",
+        "summary": "Consultar imagem do cadastro do produto",
+        "security": [
+          {
+            "integrationToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "imagem",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Imagem do produto acessível à aplicação, limitada a 10 MiB.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "mime",
+                    "content_base64"
+                  ],
+                  "properties": {
+                    "mime": {
+                      "type": "string",
+                      "enum": [
+                        "image/jpeg",
+                        "image/png",
+                        "image/webp",
+                        "image/gif"
+                      ]
+                    },
+                    "content_base64": {
+                      "type": "string",
+                      "format": "byte"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Produto ou imagem não encontrado."
           }
         }
       }
