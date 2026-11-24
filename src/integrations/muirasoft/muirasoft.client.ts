@@ -38,6 +38,15 @@ import {
 } from './muirasoft.validation.js';
 
 const MAX_RESPONSE_BYTES = 1024 * 1024;
+const CHECKOUT_CONFLICTS: Record<string, string> = {
+  PAYMENT_NOT_CONFIGURED: 'A loja ainda não habilitou os pagamentos para este pedido. Entre em contato com a loja.',
+  CHECKOUT_NOT_CONFIGURED: 'Entrega e retirada estão temporariamente indisponíveis. Entre em contato com a loja.',
+  DELIVERY_UNAVAILABLE: 'A modalidade escolhida não está disponível para este endereço. Escolha outra opção de entrega ou retirada.',
+  INSUFFICIENT_STOCK: 'A quantidade escolhida não está mais disponível. Revise os itens da sacola.',
+  MODE_CHANGED: 'A disponibilidade de um item mudou. Revise os itens da sacola.',
+  QUOTE_EXPIRED: 'A revisão do pedido expirou ou foi atualizada. Revise os valores novamente antes de confirmar.',
+  IDEMPOTENCY_CONFLICT: 'Os dados desta revisão mudaram. Inicie uma nova revisão do pedido.',
+};
 import {
   quoteResponse,
   optionsResponse,
@@ -410,7 +419,7 @@ export class MuiraSoftClient {
         },
       );
       const text = await this.readBody(response, controller, maxResponseBytes);
-      if (!response.ok) throw this.responseError(response);
+      if (!response.ok) throw this.responseError(response, text);
       if (
         !/^application\/json(?:\s*;|$)/iu.test(
           response.headers.get('content-type') ?? '',
@@ -489,7 +498,7 @@ export class MuiraSoftClient {
     return Buffer.concat(chunks, total).toString('utf8');
   }
 
-  private responseError(response: Response): MuiraSoftError {
+  private responseError(response: Response, body = ''): MuiraSoftError {
     const rawRequestId = response.headers.get('x-request-id') ?? '';
     const requestId = /^[a-f0-9]{32}$/iu.test(rawRequestId)
       ? rawRequestId
@@ -498,6 +507,16 @@ export class MuiraSoftClient {
     const retryAfterSeconds = /^\d{1,5}$/u.test(rawRetryAfter)
       ? Number(rawRetryAfter)
       : undefined;
+    // Preserve known business reasons without exposing arbitrary upstream messages or payloads.
+    if (response.status === 409) {
+      let code: unknown;
+      try { code = (JSON.parse(body) as { code?: unknown } | null)?.code; }
+      catch { /* Fall back to the safe status-based error. */ }
+      if (typeof code === 'string' && Object.hasOwn(CHECKOUT_CONFLICTS, code))
+        return new MuiraSoftError(
+          'MUIRASOFT_' + code, 409, CHECKOUT_CONFLICTS[code], retryAfterSeconds, requestId,
+        );
+    }
     const errors: Record<number, [string, number, string]> = {
       401: [
         'MUIRASOFT_AUTHENTICATION_FAILED',
