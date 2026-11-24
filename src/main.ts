@@ -5,7 +5,10 @@ async function bootstrap() {
   const config = loadConfig();
   const app = await createApplication(config);
   try {
-    await app.listen(config.port);
+    await app.listen(
+      config.port,
+      config.environment === 'production' ? '127.0.0.1' : '0.0.0.0',
+    );
   } catch (error) {
     await app.close();
     throw error;

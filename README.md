@@ -34,7 +34,7 @@ Não há endpoints públicos de compradores, produtos, checkout ou pedidos nesta
 4. Preencha juntos `MUIRASOFT_BASE_URL`, `MUIRASOFT_TOKEN`, `MUIRASOFT_COMPANY_ID` e `MUIRASOFT_CHANNEL`.
 5. Execute os comandos explícitos abaixo e consulte readiness.
 
-`MUIRASOFT_BASE_URL` é a base da instalação, por exemplo `https://erp.example/back`, **sem** `/integracao/v1`. HTTPS é obrigatório; HTTP somente em loopback para desenvolvimento e quando permitido explicitamente pelo próprio MuiraSoft. O token não pode entrar em variáveis `VITE_`.
+`MUIRASOFT_BASE_URL` é a base da instalação, por exemplo `https://erp.example/back`, **sem** `/integracao/v1`. HTTPS é obrigatório em produção. Em desenvolvimento/teste, HTTP e HTTPS são aceitos sem restrição de host. No MuiraSoft local, configure `APP_ENV=development`; na loja, use `NODE_ENV=development`. O token não pode entrar em variáveis `VITE_`.
 
 ```bash
 npm run db:migrate
@@ -102,8 +102,12 @@ O OpenAPI público descreve a superfície implementada; a coleção carrega veri
 
 O snapshot original contém três declarações `required: []`, inválidas em OpenAPI 3.0. A [cópia para ferramentas](contracts/muirasoft/integracoes-v1.tooling.openapi.json) remove somente essas listas vazias, sem mudar campos obrigatórios ou operações. `npm run contracts:prepare` gera essa cópia com transformação e checksum registrados na proveniência. Os testes validam o contrato público e a cópia para ferramentas com Swagger Parser e verificam a integridade do original. O lint do Postman CLI instalado solicitou autenticação; a validação OpenAPI local não depende dela.
 
-Autenticação dos compradores e endereços pertencem ao NestJS. Produtos, operação comercial, pagamentos Asaas de cada lojista, financeiro, e-mails com servidor próprio/padrão e envio fiscal pertencem ao MuiraSoft. A política atual dos pedidos continua `SEM_MOVIMENTO`; esta fundação não habilita vendas com reserva, cobrança ou envio de mensagens.
+Autenticação dos compradores e endereços pertencem ao NestJS. Produtos, operação comercial, pagamentos Asaas de cada lojista, financeiro, e-mails de pedidos com servidor próprio/padrão e envio fiscal pertencem ao MuiraSoft. Os e-mails de cadastro e recuperação de senha usam exclusivamente o SMTP e a fila da API da loja. A política atual dos pedidos continua `SEM_MOVIMENTO`; esta fundação não habilita vendas com reserva, cobrança ou envio de mensagens.
 
 ## Conta do comprador
 
 A etapa 4 acrescenta `/api/v1/auth` e mensagens de confirmação/recuperação por MuiraSoft. Consulte [configuração e testes](docs/conta-comprador.md). A empresa da loja ainda precisa ser cadastrada no ERP para ativar os envios reais.
+
+### SMTP de conta do site
+
+Configure `MAIL_HOST`, `MAIL_PORT`, `MAIL_ENCRYPTION`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM_ADDRESS` e `MAIL_FROM_NAME` no `.env` privado desta API. A configuração local usa `contato@cabecadocachorro.com.br` em `smtp.hostinger.com:465` com SSL. Falta preencher a senha da caixa e reiniciar a API. Com autenticação e SMTP configurados, a fila é processada automaticamente; `npm run mail:process` também permite processamento manual. Esses envios não usam o MuiraSoft. Veja [conta do comprador](docs/conta-comprador.md).

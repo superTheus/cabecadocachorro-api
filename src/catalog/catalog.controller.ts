@@ -44,6 +44,7 @@ export class CatalogController {
   async image(@Req() req: Request, @Param('product') product: string, @Param('image') image: string, @Res() res: Response) {
     this.limit(req);
     const file = await this.catalog.image(product, image);
+    res.setHeader('Cache-Control', 'public, max-age=300');
     res.type(file.mime).send(file.content);
   }
   @Get('catalog/products/:id') detail(

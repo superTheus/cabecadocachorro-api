@@ -35,6 +35,7 @@ export interface MuiraSoftProduct {
   loja?: MuiraSoftProductPublication | null;
   categoria?: string | null;
   imagens?: { id: number }[];
+  variacao?: { modelo_id: number; nome_modelo: string; cor: string; cor_hex?: string; tamanho: string; codigo: string } | null;
   id: number;
   descricao: string;
   unidade?: string | null;

@@ -185,7 +185,7 @@
                   },
                   "password": {
                     "type": "string",
-                    "minLength": 12,
+                    "minLength": 8,
                     "maxLength": 256
                   }
                 }
@@ -255,6 +255,31 @@
           },
           "503": {
             "description": "Módulo ou banco indisponível"
+          },
+          "202": {
+            "description": "Conta ainda não confirmada. Confirmação expirada é reenviada automaticamente, sem criar sessão ou cookie.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "verification_required",
+                    "message"
+                  ],
+                  "properties": {
+                    "verification_required": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
           }
         },
         "parameters": [
@@ -567,7 +592,7 @@
                   },
                   "password": {
                     "type": "string",
-                    "minLength": 12,
+                    "minLength": 8,
                     "maxLength": 256
                   }
                 }
@@ -642,7 +667,7 @@
                   },
                   "password": {
                     "type": "string",
-                    "minLength": 12,
+                    "minLength": 8,
                     "maxLength": 256
                   }
                 }
@@ -3047,6 +3072,12 @@
             "minimum": 0,
             "maximum": 99,
             "nullable": true
+          },
+          "color_hex": {
+            "type": "string",
+            "nullable": true,
+            "pattern": "^#[A-Fa-f0-9]{6}$",
+            "description": "HEX da cor cadastrada no MuiraSoft, quando disponível."
           }
         },
         "required": [

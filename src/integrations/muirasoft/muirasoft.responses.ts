@@ -195,6 +195,7 @@ export function productResponse(value: unknown): MuiraSoftProduct {
     kit: boolean,
     preco_venda: nullable(decimal),
     categoria: nullable(string),
+    variacao: nullable((value) => shape(value, { modelo_id: id, nome_modelo: string, cor: string, cor_hex: (v) => /^#[0-9a-f]{6}$/iu.test(string(v)) ? v : invalid(), tamanho: string, codigo: string }, ['modelo_id', 'nome_modelo', 'cor', 'tamanho', 'codigo'])),
     imagens: array((value) => shape(value, { id }, ['id']), 10),
     loja: nullable((value: unknown) => {
       const publication = shape(

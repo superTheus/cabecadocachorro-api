@@ -1,6 +1,6 @@
 # Arquitetura da loja e limites da etapa 1
 
-A loja apresenta os produtos e a compra. O NestJS mantém a identidade dos compradores e integra a experiência com o MuiraSoft. O MuiraSoft concentra a operação comercial, pagamentos, e-mails e documentos fiscais.
+A loja apresenta os produtos e a compra. O NestJS mantém a identidade dos compradores e integra a experiência com o MuiraSoft. O MuiraSoft concentra a operação comercial, pagamentos, e-mails de pedidos e documentos fiscais. A loja envia diretamente os e-mails de cadastro e recuperação de senha.
 
 **O layout atual da loja é uma regra obrigatória.** Cadastro, login, área do cliente e checkout seguirão as cores, tipografia, espaçamentos, componentes, animações e comportamento responsivo estabelecidos. A etapa 1 não altera o frontend. Revisão visual em desktop e celular integra o aceite das próximas etapas.
 
@@ -14,10 +14,11 @@ A loja apresenta os produtos e a compra. O NestJS mantém a identidade dos compr
 | Pedido e snapshots dos dados usados na compra | MuiraSoft |
 | Referência do checkout e resultado das tentativas de integração | API NestJS |
 | Cobranças, conciliação, estornos e vínculo com Asaas | MuiraSoft |
-| Configuração do servidor e processamento de e-mails | MuiraSoft |
+| E-mails de pedidos e documentos | MuiraSoft |
+| SMTP, modelos e fila de cadastro/recuperação de senha | API da loja |
 | Emissão e envio de PDF/XML de nota autorizada | MuiraSoft |
 
-O navegador acessa a API NestJS. O NestJS chama a integração HTTP do MuiraSoft com uma credencial de servidor. As chaves Asaas e SMTP pertencem à configuração do lojista no MuiraSoft e não são configurações desta API.
+O navegador acessa a API NestJS. O NestJS chama a integração HTTP do MuiraSoft com uma credencial de servidor. A chave Asaas e o SMTP dos pedidos pertencem à configuração no MuiraSoft. O SMTP de cadastro e recuperação de senha fica exclusivamente no ambiente desta API.
 
 ## Fronteiras dos módulos
 

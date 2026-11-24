@@ -57,7 +57,7 @@ export function emailInput(value: string): string {
 }
 export function checkPassword(value: string): void {
   if (
-    value.length < 12 ||
+    value.length < 8 ||
     Buffer.byteLength(value) > 256 ||
     /[\x00-\x1f\x7f]/.test(value)
   )
@@ -162,6 +162,17 @@ export class AuthService {
       ],
     );
   }
+  private async ensureVerification(
+    m: EntityManager,
+    customer: Customer,
+  ): Promise<void> {
+    if (customer.verified_at) return;
+    const active = await m.query<{ token_hash: string }[]>(
+      "SELECT token_hash FROM customer_tokens WHERE customer_id=? AND purpose='verify' AND used_at IS NULL AND expires_at>UTC_TIMESTAMP(6) LIMIT 1",
+      [customer.id],
+    );
+    if (!active.length) await this.issue(m, customer, 'verify');
+  }
   async register(body: unknown, ip: string) {
     const data = input(body, ['name', 'email', 'password']),
       email = emailInput(data.email);
@@ -185,7 +196,7 @@ export class AuthService {
         'SELECT * FROM customers WHERE store_id=? AND email=? FOR UPDATE',
         [this.config.store.id, email],
       );
-      if (rows[0].id === id) await this.issue(m, rows[0], 'verify');
+      await this.ensureVerification(m, rows[0]);
     });
     return genericMessage;
   }
@@ -196,8 +207,8 @@ export class AuthService {
     if (found)
       await this.db.transaction(async (m) => {
         const user = await this.lock(m, found.id);
-        if (purpose === 'reset' || !user.verified_at)
-          await this.issue(m, user, purpose);
+        if (purpose === 'reset') await this.issue(m, user, purpose);
+        else await this.ensureVerification(m, user);
       });
     return genericMessage;
   }
@@ -211,12 +222,19 @@ export class AuthService {
         data.password,
         found?.password_hash || '',
       );
-    if (!found || !matches || !found.verified_at)
-      throw new UnauthorizedException();
+    if (!found || !matches) throw new UnauthorizedException();
     return this.db.transaction(async (m) => {
       const user = await this.lock(m, found.id);
-      if (user.password_hash !== found.password_hash || !user.verified_at)
+      if (user.password_hash !== found.password_hash)
         throw new UnauthorizedException();
+      if (!user.verified_at) {
+        await this.ensureVerification(m, user);
+        return {
+          verification_required: true as const,
+          message:
+            'Confira seu e-mail para confirmar sua conta. Se o link anterior expirou, enviamos uma nova confirmação.',
+        };
+      }
       const raw = token();
       await m.query(
         'INSERT INTO customer_sessions(token_hash,customer_id,expires_at) VALUES(?,?,?)',

@@ -31,7 +31,6 @@ O prefixo remoto é `/integracao/v1`, relativo à instalação do backend.
 | `POST /pedidos/{id}/pagamentos` | `pagamentos:criar` | Intenção/cobrança Pix ou cartão em até 3 vezes; não confirma pagamento pelo HTTP 202 |
 | `GET /pedidos/{id}/pagamentos` | `pagamentos:ler` | Tentativas e parcelas do pedido desta conexão |
 | `GET /pedidos/{id}/pagamentos/{pagamento}/pix` | `pagamentos:ler` | PNG e copia e cola com prazo do Asaas |
-| `POST /contas/emails` | `contas:email` | Solicitação idempotente de mensagem de conta |
 
 Essas operações pertencem ao MuiraSoft. A etapa 1 não publica catálogo ou pedidos no NestJS e não permite consultar pedidos de consumidores pelo identificador informado sem futura autorização de comprador.
 
@@ -89,7 +88,6 @@ Erros remotos têm `code`, `message`, `request_id` e, quando aplicável, `fields
 | Reserva de pronta entrega | Compartilhada com PDV, somente para produtos com controle ativo | Conectar ao checkout e homologar com empresa da loja |
 | Pronta entrega e encomenda | Modalidade por item, snapshot e prazo | Apresentar sacola/checkout nas etapas 10/11 |
 | Cobrança de pedido | Asaas por lojista, Pix/cartão, tentativas, inbox, conciliação e estorno integral | Checkout do comprador, homologação real e operação de exceções |
-| E-mails de conta | `POST /contas/emails`, escopo `contas:email` | Origem autorizada no ERP, conexão de administrador e SMTP configurados |
 | Nota fiscal para comprador | Sem endpoint na integração externa | Acesso autorizado aos documentos e envio automático de PDF/XML pelo MuiraSoft |
 | Eventos MuiraSoft para a loja | Ausentes nesta integração | Sincronização e notificações com recuperação e controle de duplicidade |
 

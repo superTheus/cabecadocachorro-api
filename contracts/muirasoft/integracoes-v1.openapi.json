@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "MuiraSoft API",
-    "version": "1.9.0",
+    "version": "1.10.0",
     "description": "API do MuiraSoft para aplicações externas: catálogos web, aplicativos, relatórios, sistemas internos e lojas. O MuiraSoft emite tokens com permissões por aplicação e empresa. Asaas e checkout são opcionais. Consultar produtos não exige operação de venda, publicação, carteira ou provedor. Novas aplicações usam origem API e consulta geral por padrão; conexões existentes preservam sua seleção de produtos. Somente ações efetivamente concedidas e implementadas ficam disponíveis. Estoque exclusivamente no MuiraSoft e somente em produtos controlados. Pedidos, pagamento, saída física e fiscal permanecem separados."
   },
   "servers": [
@@ -702,6 +702,44 @@
               }
             },
             "description": "Imagens do cadastro, em ordem. Conteúdo disponível pela API autenticada."
+          },
+          "variacao": {
+            "type": "object",
+            "nullable": true,
+            "description": "Identificação automática da variação e do modelo cadastrado no MuiraSoft.",
+            "required": [
+              "modelo_id",
+              "nome_modelo",
+              "cor",
+              "tamanho",
+              "codigo"
+            ],
+            "properties": {
+              "modelo_id": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "nome_modelo": {
+                "type": "string"
+              },
+              "cor": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "cor_hex": {
+                "type": "string",
+                "pattern": "^#[A-Fa-f0-9]{6}$",
+                "example": "#1E88E5"
+              },
+              "tamanho": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "codigo": {
+                "type": "string",
+                "maxLength": 80
+              }
+            }
           }
         },
         "required": [

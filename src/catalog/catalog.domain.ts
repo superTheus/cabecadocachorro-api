@@ -8,6 +8,7 @@ export interface CatalogVariant {
   title: string;
   price: string;
   color: string;
+  color_hex?: string | null;
   size: string;
   images: string[];
   fulfillment: 'PRONTA_ENTREGA' | 'ENCOMENDA' | 'MISTA';
@@ -47,10 +48,11 @@ export function decimal(v: bigint): string {
   return `${v / 100n}.${String(v % 100n).padStart(2, '0')}`;
 }
 export function productId(p: MuiraSoftProduct): string {
-  return p.loja?.grupo_variacao
+  const group = presentation(p).grupo_variacao;
+  return group
     ? 'g_' +
         createHash('sha256')
-          .update(p.loja.grupo_variacao)
+          .update(group)
           .digest('hex')
           .slice(0, 32)
     : `p_${p.id}`;
@@ -78,6 +80,7 @@ export function variant(p: MuiraSoftProduct): CatalogVariant | null {
     title: l.titulo,
     price: p.preco_venda,
     color: l.cor,
+    color_hex: p.loja ? null : p.variacao?.cor_hex || null,
     size: l.tamanho,
     images: l.imagens,
     fulfillment: l.modalidade,
@@ -88,9 +91,9 @@ export function variant(p: MuiraSoftProduct): CatalogVariant | null {
 }
 export function presentation(p: MuiraSoftProduct) {
   return p.loja ?? {
-    titulo: p.descricao, descricao: p.descricao, categoria: p.categoria || 'Sem categoria',
+    titulo: p.variacao?.nome_modelo || p.descricao, descricao: p.variacao?.nome_modelo || p.descricao, categoria: p.categoria || 'Sem categoria',
     imagens: (p.imagens || []).map((image) => `/api/v1/catalog/images/${p.id}/${image.id}`),
-    grupo_variacao: null, cor: '', tamanho: '', modalidade: 'PRONTA_ENTREGA' as const, prazo_dias: null,
+    grupo_variacao: p.variacao ? `modelo:${p.variacao.modelo_id}` : null, cor: p.variacao?.cor || '', tamanho: p.variacao?.tamanho || '', modalidade: 'PRONTA_ENTREGA' as const, prazo_dias: null,
   };
 }
 export function groupProducts(products: MuiraSoftProduct[]): CatalogProduct[] {
@@ -103,6 +106,7 @@ export function groupProducts(products: MuiraSoftProduct[]): CatalogProduct[] {
       current = result.get(id);
     if (current) {
       current.variants.push(v);
+      if (!current.images.length && v.images.length) current.images = v.images;
       if (cents(v.price) < cents(current.price_from))
         current.price_from = v.price;
     } else

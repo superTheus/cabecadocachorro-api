@@ -24,6 +24,7 @@ import {
 export class CatalogService {
   private cache: { at: number; products: CatalogProduct[] } | null = null;
   private loading: Promise<CatalogProduct[]> | null = null;
+  private readonly imageLoads = new Map<string, Promise<{ content: Buffer; mime: string }>>();
   constructor(
     @Inject(AppConfig) private readonly config: AppConfig,
     @Inject(DatabaseService) private readonly db: DatabaseService,
@@ -124,7 +125,10 @@ export class CatalogService {
     else found.reverse();
     return {
       store_id: this.config.store.id,
-      items: found.slice((q.page - 1) * q.limit, q.page * q.limit),
+      items: found.slice((q.page - 1) * q.limit, q.page * q.limit).map((product) => {
+        const colorImages = q.color && product.variants.find((variant) => variant.color === q.color && variant.images.length)?.images;
+        return colorImages ? { ...product, images: colorImages } : product;
+      }),
       total: found.length,
       page: q.page,
       limit: q.limit,
@@ -133,10 +137,21 @@ export class CatalogService {
   }
   async image(product: string, image: string) {
     if (!/^[1-9]\d{0,15}$/u.test(product) || !/^[1-9]\d{0,15}$/u.test(image)) throw new NotFoundException();
-    await this.ready();
-    const p = await this.erp.getProduct(Number(product));
-    if (!variant(p) || !p.imagens?.some((i) => i.id === Number(image))) throw new NotFoundException();
-    return this.erp.productImage(Number(product), Number(image));
+    const key = `${product}/${image}`;
+    const pending = this.imageLoads.get(key);
+    if (pending) return pending;
+    const loading = (async () => {
+      await this.ready();
+      const p = await this.erp.getProduct(Number(product));
+      if (!variant(p) || !p.imagens?.some((i) => i.id === Number(image))) throw new NotFoundException();
+      return this.erp.productImage(Number(product), Number(image));
+    })();
+    this.imageLoads.set(key, loading);
+    try {
+      return await loading;
+    } finally {
+      this.imageLoads.delete(key);
+    }
   }
   async detail(id: string) {
     if (!/^(p_\d{1,16}|g_[a-f0-9]{32})$/u.test(id))

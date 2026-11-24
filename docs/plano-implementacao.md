@@ -2,7 +2,7 @@
 
 Estado atual em 03/11/2026: etapas 1–14 implementadas localmente; etapa 15 com validação técnica concluída e homologação empresarial/visual pendentes. As atualizações anteriores abaixo são históricas. Consulte [fiscal e homologação](fiscal-homologacao.md) e o guia canônico no backend MuiraSoft antes de iniciar implantação/piloto da etapa 16.
 
-A Cabeça do Cachorro vende roupas e outros produtos pela loja Vue. O NestJS mantém a conta do comprador e conecta a experiência ao MuiraSoft. O MuiraSoft concentra produtos, estoque, pedidos, pagamentos, e-mails, atendimento e documentos fiscais. Os módulos de pagamentos e e-mails atendem outros lojistas com isolamento por conta e contexto de empresa.
+A Cabeça do Cachorro vende roupas e outros produtos pela loja Vue. O NestJS mantém a conta do comprador e conecta a experiência ao MuiraSoft. O MuiraSoft concentra produtos, estoque, pedidos, pagamentos, e-mails de pedidos, atendimento e documentos fiscais. Cadastro e recuperação de senha ficam exclusivamente na API da loja, incluindo SMTP e fila. Os módulos de pagamentos e e-mails atendem outros lojistas com isolamento por conta e contexto de empresa.
 
 **Preservar o layout da loja é obrigatório em todas as etapas.** Reutilizar a identidade, tipografia, cores, espaçamentos, componentes, animações e responsividade existentes. Cadastro, área do cliente e checkout seguirão esse padrão, com revisão visual em desktop e celular. A etapa 1 não modifica o frontend.
 
@@ -15,7 +15,7 @@ A Cabeça do Cachorro vende roupas e outros produtos pela loja Vue. O NestJS man
 - Conta do cliente com cadastro, login, perfil, endereços, histórico e acompanhamento.
 - Asaas configurado pelo lojista no MuiraSoft; cobranças na conta Asaas desse lojista.
 - Cartão em até 3 vezes sem juros. Pagamento tardio sem estoque permanece registrado e segue para revisão, sem estorno automático.
-- MuiraSoft envia os e-mails da loja. Sem configuração personalizada ativa, utiliza o servidor padrão do MuiraSoft.
+- MuiraSoft envia os e-mails de pedidos. A loja envia confirmação de cadastro e recuperação de senha pelo seu próprio SMTP.
 - Nota autorizada enviada ao comprador com PDF e XML e disponibilizada com autorização na área do cliente.
 
 ## Etapas e critérios de conclusão

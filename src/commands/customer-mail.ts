@@ -12,7 +12,7 @@ try {
   console.log('Mensagens processadas:', count);
 } catch {
   console.error(
-    'Não foi possível processar as mensagens de conta. Confira configuração, banco e integração.',
+    'Não foi possível processar as mensagens de conta. Confira o banco e o SMTP da loja.',
   );
   process.exitCode = 1;
 } finally {

@@ -97,6 +97,10 @@ export class AuthController {
   ) {
     this.origin(r);
     const result = await this.auth.login(b, r.ip || 'unknown');
+    if ('verification_required' in result) {
+      res.status(202);
+      return result;
+    }
     this.cookie(res, result.session);
     return result.user;
   }

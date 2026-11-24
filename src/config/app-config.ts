@@ -30,7 +30,25 @@ export class AppConfig {
       enabled: false,
     },
     readonly trustedProxies: readonly string[] = [],
+    readonly mail: Readonly<{
+      host?: string;
+      port: number;
+      encryption: 'ssl' | 'tls';
+      username?: string;
+      password?: string;
+      fromAddress?: string;
+      fromName: string;
+    }> = { port: 465, encryption: 'ssl', fromName: 'Cabeça do Cachorro' },
   ) {}
+
+  get mailConfigured(): boolean {
+    return !!(
+      this.mail.host &&
+      this.mail.username &&
+      this.mail.password &&
+      this.mail.fromAddress
+    );
+  }
 
   get integrationConfigured(): boolean {
     return !!(
@@ -148,14 +166,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const baseUrl = env.MUIRASOFT_BASE_URL
     ? httpUrl(env.MUIRASOFT_BASE_URL, 'MUIRASOFT_BASE_URL', production)
     : undefined;
-  if (baseUrl) {
-    const upstream = new URL(baseUrl);
-    if (
-      upstream.protocol === 'http:' &&
-      !['localhost', '127.0.0.1', '[::1]'].includes(upstream.hostname)
-    )
-      invalid('MUIRASOFT_BASE_URL');
-  }
   if (baseUrl && /\/integracao\/v\d+$/.test(baseUrl))
     invalid('MUIRASOFT_BASE_URL');
   const token = env.MUIRASOFT_TOKEN || undefined;
@@ -207,6 +217,17 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   if (trustedProxies.length > 20 || trustedProxies.some((ip) => !isIP(ip)))
     invalid('TRUSTED_PROXY_IPS');
 
+  const mailHost = env.MAIL_HOST || undefined;
+  if (mailHost && !/^[a-z0-9][a-z0-9.-]*[a-z0-9]$/i.test(mailHost))
+    invalid('MAIL_HOST');
+  const mailEncryption = env.MAIL_ENCRYPTION || 'ssl';
+  if (!['ssl', 'tls'].includes(mailEncryption)) invalid('MAIL_ENCRYPTION');
+  const fromAddress = env.MAIL_FROM_ADDRESS || env.MAIL_USERNAME || undefined;
+  if (fromAddress && !/^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(fromAddress))
+    invalid('MAIL_FROM_ADDRESS');
+  const fromName = env.MAIL_FROM_NAME || 'Cabeça do Cachorro';
+  if (/[\r\n]/.test(fromName)) invalid('MAIL_FROM_NAME');
+
   return new AppConfig(
     environment as AppConfig['environment'],
     integer(env.PORT, 'PORT', 3000, 65535),
@@ -232,5 +253,19 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     }),
     Object.freeze({ enabled: authEnabled, key: authKey }),
     Object.freeze(trustedProxies),
+    Object.freeze({
+      host: mailHost,
+      port: integer(
+        env.MAIL_PORT,
+        'MAIL_PORT',
+        mailEncryption === 'ssl' ? 465 : 587,
+        65535,
+      ),
+      encryption: mailEncryption as 'ssl' | 'tls',
+      username: env.MAIL_USERNAME || undefined,
+      password: env.MAIL_PASSWORD || undefined,
+      fromAddress,
+      fromName,
+    }),
   );
 }
